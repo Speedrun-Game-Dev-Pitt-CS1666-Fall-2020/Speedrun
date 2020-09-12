@@ -1,0 +1,6 @@
+﻿  main.cpp
+C:\Users\Alex\Documents\GitHub\Speedrun\UnivSDL\UnivSDL\main.cpp(2,10): warning C4067: unexpected tokens following preprocessor directive - expected a newline
+  SimplexNoise.cpp
+  XorShifter.cpp
+  Generating Code...
+  UnivSDL.vcxproj -> C:\Users\Alex\Documents\GitHub\Speedrun\UnivSDL\x64\Debug\UnivSDL.exe
