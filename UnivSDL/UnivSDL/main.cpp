@@ -13,7 +13,10 @@ int main(int argc, char* argv[]) {
 
 	XorShifter* rng = new XorShifter(412001000);
 	SimplexNoise* simp = new SimplexNoise(123);
-	simp->octaves = 1;
+
+
+
+	simp->octaves = 10;
 	simp->updateFractalBounds();
 	std::cout << "Hello" << std::endl;
 
@@ -22,12 +25,13 @@ int main(int argc, char* argv[]) {
 			//int grey = (int)(rng->fnext() * 256);
 			
 			Uint8 grey = (int)((simp->getFractal((float)x,(float)y))*256);
-			//std::cout << (grey) << std::endl;
 			
 			SDL_SetRenderDrawColor(renderer, grey, grey, grey, 255);
 			SDL_RenderDrawPoint(renderer,x,y);
 		}
 	}
+	SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
+
 
 	SDL_RenderPresent(renderer);
 	SDL_Delay(10000);
@@ -35,10 +39,4 @@ int main(int argc, char* argv[]) {
 	
 
 	return 0;
-}
-void log(Uint8 b) {
-	std::cout << b << std::endl;
-}
-void log(char*str) {
-	std::cout << str << std::endl;
 }
