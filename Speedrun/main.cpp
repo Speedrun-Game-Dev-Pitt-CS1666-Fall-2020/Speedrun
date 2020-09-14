@@ -31,8 +31,8 @@ int main(int argc, char* argv[]) {
 	simp->octaves = 2;
 	simp->updateFractalBounds();
 
-	int creditSize = 8;
-	Image* credits[8] = { 
+	int creditSize = 10;
+	Image* credits[10] = { 
 		loadImage("res/rjd68.png",800,600),
 		loadImage("res/alex.png",1280,720),
 		loadImage("res/andrew.png",1280,720),
@@ -40,7 +40,9 @@ int main(int argc, char* argv[]) {
 		loadImage("res/connor.png",1280,720),
 		loadImage("res/jacob.png",1280,720),
 		loadImage("res/lucas.png",1280,720),
-		loadImage("res/robert.png",1280,720) 
+		loadImage("res/robert.png",1280,720),
+		loadImage("res/ryan.png",1280,720),
+		loadImage("res/spencer.png",1280,720)  
 	};
 
 
