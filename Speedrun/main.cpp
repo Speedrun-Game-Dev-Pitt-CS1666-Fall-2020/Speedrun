@@ -4,12 +4,17 @@
 #include "XorShifter.h"
 #include "SimplexNoise.h"
 #include "Screen.h"
+#include "Image.h"
 
 static const int WIDTH = 1280;
 static const int HEIGHT = 720;
 
 Screen* screen;
 
+
+Image* loadImage(const char* src, int w, int h) {
+	return new Image(screen, src, 0, 0, w, h);
+}
 
 int main(int argc, char* argv[]) {
 	if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
@@ -23,21 +28,20 @@ int main(int argc, char* argv[]) {
 	XorShifter* rng = new XorShifter(412001000);
 	SimplexNoise* simp = new SimplexNoise(420);
 	simp->freq = 0.02f;
-	simp->octaves = 3;
+	simp->octaves = 2;
 	simp->updateFractalBounds();
 
-
-
-	auto surface = IMG_Load("res/rjd68.png");
-	if (!surface) {
-		std::cerr << "Failed to create surface.\n";
-	}
-	auto texture = SDL_CreateTextureFromSurface(screen->renderer, surface);
-	if (!texture) {
-		std::cerr << "Failed to create texture.\n";
-	}
-	SDL_Rect textureBounds = { 0,0,800,600 };
-	SDL_Rect screenBounds = { 0,0,WIDTH,HEIGHT };
+	int creditSize = 8;
+	Image* credits[8] = { 
+		loadImage("res/rjd68.png",800,600),
+		loadImage("res/alex.png",1280,720),
+		loadImage("res/andrew.png",1280,720),
+		loadImage("res/cas380.png",1280,720),
+		loadImage("res/connor.png",1280,720),
+		loadImage("res/jacob.png",1280,720),
+		loadImage("res/lucas.png",1280,720),
+		loadImage("res/robert.png",1280,720) 
+	};
 
 
 	Uint32 then = SDL_GetTicks();
@@ -50,7 +54,7 @@ int main(int argc, char* argv[]) {
 		if (delta >= 16) {
 			then = now;
 			dt = (float)delta / 16.f;
-			std::cout << delta << std::endl;
+			//std::cout << delta << std::endl;
 
 			SDL_SetRenderDrawColor(screen->renderer, 255, 0, 0, 255);
 			SDL_RenderClear(screen->renderer);
@@ -68,8 +72,12 @@ int main(int argc, char* argv[]) {
 					
 				}
 			}
-
-			SDL_RenderCopy(screen->renderer, texture, &textureBounds, screen->dimensions);
+			int index = now / 3000;
+			if (index >= creditSize)break;
+			//std::cout << index << std::endl;
+			Image* img = credits[index];
+			std::cout << img->bounds->w << std::endl;
+			SDL_RenderCopy(screen->renderer, img->texture, img->bounds, screen->bounds);
 			SDL_RenderPresent(screen->renderer);
 
 			screen->pollEvents();

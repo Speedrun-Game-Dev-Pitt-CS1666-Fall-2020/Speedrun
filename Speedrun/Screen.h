@@ -6,7 +6,7 @@ public:
 	SDL_Window* window = nullptr;
 	SDL_Renderer* renderer = nullptr;
 
-	SDL_Rect* dimensions;
+	SDL_Rect* bounds;
 
 	Screen(const char* title, int w, int h);
 

@@ -53,16 +53,11 @@
     <ClInclude Include="SimplexNoise.h">
       <Filter>Header Files\Utils\Random</Filter>
     </ClInclude>
-    <ClInclude Include="Sprite.h">
-      <Filter>Header Files\Utils\Render</Filter>
-    </ClInclude>
     <ClInclude Include="Screen.h">
       <Filter>Header Files\Utils\Render</Filter>
     </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <Image Include="rjd68.png">
-      <Filter>Resource Files</Filter>
-    </Image>
+    <ClInclude Include="Image.h">
+      <Filter>Header Files\Utils\Render</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

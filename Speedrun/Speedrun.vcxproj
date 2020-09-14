@@ -150,11 +150,8 @@
   <ItemGroup>
     <ClInclude Include="Screen.h" />
     <ClInclude Include="SimplexNoise.h" />
-    <ClInclude Include="Sprite.h" />
+    <ClInclude Include="Image.h" />
     <ClInclude Include="XorShifter.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <Image Include="rjd68.png" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
