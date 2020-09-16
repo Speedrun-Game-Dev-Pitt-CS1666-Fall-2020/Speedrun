@@ -15,7 +15,7 @@ ifdef OS
 else
     # Linux
     INCLUDE_PATHS = -I/usr/include/SDL2
-    LIBRARY_PATHS = -L ???
+    LIBRARY_PATHS = -L/usr/lib/x86_64-linux-gnu
 endif
 
 #COMPILER_FLAGS specifies the additional compilation options we're using
