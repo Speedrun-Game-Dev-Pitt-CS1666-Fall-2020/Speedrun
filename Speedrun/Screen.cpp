@@ -9,12 +9,13 @@ Screen::Screen(const char* title, int w, int h) {
 Screen::~Screen() {
 	SDL_DestroyRenderer(renderer);
 	SDL_DestroyWindow(window);
-	delete dimensions;
+	delete bounds;
 	SDL_Quit();
 }
 
 bool Screen::init(const char* title, int w, int h) {
-	this->window = SDL_CreateWindow(title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, w, h, SDL_WINDOW_SHOWN);
+	this->window = SDL_CreateWindow(title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, w, h, SDL_WINDOW_SHOWN | SDL_GL_CONTEXT_FLAGS);
+
 	if (window == nullptr) {
 		std::cerr << "Failed to create window." << std::endl;
 		return false;
@@ -24,7 +25,7 @@ bool Screen::init(const char* title, int w, int h) {
 		std::cerr << "Failed to create renderer." << std::endl;
 		return false;
 	}
-	this->dimensions = new SDL_Rect{0, 0, w, h};
+	this->bounds = new SDL_Rect{0, 0, w, h};
 	return true;
 }
 
