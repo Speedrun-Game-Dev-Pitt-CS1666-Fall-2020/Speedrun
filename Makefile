@@ -17,8 +17,8 @@ ifdef OS
 else
     # Linux
     INCLUDE_PATHS = -I/usr/include/SDL2
-    LIBRARY_PATHS = -L/usr/lib/x86_64-linux-gnu
-    LINKER_FLAGS = -lSDL2main -lSDL2 -lSDL2_image
+    LIBRARY_PATHS = 
+    LINKER_FLAGS = -lSDL2 -lSDL2_image
 endif
 
 COMPILER_FLAGS = -w
