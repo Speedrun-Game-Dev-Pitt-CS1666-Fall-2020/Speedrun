@@ -1,1 +1,5 @@
-*.VC.opendb
+*.exe
+.vscode
+
+bin
+include
