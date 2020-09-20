@@ -8,6 +8,7 @@
 
 #define CREDIT_SIZE 10
 
+
 constexpr int SCREEN_WIDTH = 1280;
 constexpr int SCREEN_HEIGHT = 720;
 
@@ -60,6 +61,7 @@ void runCredits(){
 	simp->updateFractalBounds();
 
 	Image* credits[CREDIT_SIZE] = { 
+
 		loadImage("../res/rjd68.png",800,600),
 		loadImage("../res/alex.png",1280,720),
 		loadImage("../res/andrew.png",1280,720),
@@ -112,6 +114,7 @@ void runCredits(){
 			screen->pollEvents();
 		}
 	}
+
 
 }
 
