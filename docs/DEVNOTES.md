@@ -1,0 +1,1 @@
+dependency for SDL on windows is self-contained but linux must install SDL through their package manager
