@@ -7,6 +7,7 @@
 #include "Image.h"
 
 #define CREDIT_SIZE 10
+#define MENU_SIZE 2
 
 constexpr int SCREEN_WIDTH = 1280;
 constexpr int SCREEN_HEIGHT = 720;
@@ -17,6 +18,10 @@ constexpr int BOX_HEIGHT = 20;
 
 // Globals
 Screen *screen = nullptr;
+Uint32 before;
+Uint32 then;
+Uint32 delta;
+Uint32 now;
 
 // Function declarations
 bool init();
@@ -24,6 +29,7 @@ void close();
 Image *loadImage(const char *, int, int);
 void runCredits();
 void runGame();
+void runMenu();
 
 Image *loadImage(const char *src, int w, int h)
 {
@@ -44,6 +50,8 @@ bool init()
 		std::cerr << "Failed to initialize SDL_image" << std::endl;
 		return false;
 	}
+
+	then = SDL_GetTicks();
 
 	return true;
 }
@@ -77,12 +85,16 @@ void runCredits()
 		loadImage("../res/spencer.png", 1280, 720),
 		loadImage("../res/ryanyang.png", 1280, 720)};
 
-	Uint32 then = SDL_GetTicks();
-	Uint32 delta;
-	Uint32 now;
+	
 	float dt;
+
 	while (!screen->isClosed())
 	{
+		const Uint8* keystate = SDL_GetKeyboardState(nullptr);
+		SDL_Event e;
+		if(keystate[SDL_SCANCODE_ESCAPE] || e.type == SDL_QUIT)
+				return;
+
 		now = SDL_GetTicks();
 		delta = now - then;
 		if (delta >= 16)
@@ -108,7 +120,7 @@ void runCredits()
 					SDL_RenderFillRect(screen->renderer, &pixel);
 				}
 			}
-			int index = now / 3000;
+			int index = (now - before) / 3000;
 			if (index >= CREDIT_SIZE)
 				break;
 			//std::cout << index << std::endl;
@@ -153,7 +165,8 @@ void runGame()
 
 		while (SDL_PollEvent(&e))
 		{
-			if (e.type == SDL_QUIT)
+			const Uint8 *keystate = SDL_GetKeyboardState(nullptr);
+			if (e.type == SDL_QUIT || keystate[SDL_SCANCODE_ESCAPE])
 			{
 				gameon = false;
 			}
@@ -187,7 +200,6 @@ void runGame()
 			}
 			else if (e.type == SDL_KEYUP)
 			{
-				const Uint8 *keystate = SDL_GetKeyboardState(nullptr);
 				switch (e.key.keysym.sym)
 				{
 				case SDLK_w:
@@ -226,6 +238,61 @@ void runGame()
 	}
 }
 
+void runMenu()
+{
+	SDL_Event e;
+	bool gameon = true;
+	bool menuon = true;
+	int menuPos = 0;
+
+	Image *menu[MENU_SIZE] = {
+		loadImage("../res/play.png", 1280, 720),
+		loadImage("../res/creds.png", 1280, 720),
+	};
+
+	while (gameon)
+	{
+		while (SDL_PollEvent(&e))
+		{
+			if (e.type == SDL_QUIT)
+			{
+				gameon = false;
+			}
+		}
+
+		if (menuon)
+		{
+
+			const Uint8 *keystate = SDL_GetKeyboardState(nullptr);
+			if (keystate[SDL_SCANCODE_RETURN] && menuPos == 0)
+			{
+				runGame();
+			}
+			if (keystate[SDL_SCANCODE_RETURN] && menuPos == 1)
+			{
+				before = SDL_GetTicks();
+				runCredits();
+			}
+			if (keystate[SDL_SCANCODE_A] && menuPos == 1)
+			{
+				//can go left
+				menuPos = 0;
+			}
+			if (keystate[SDL_SCANCODE_D] && menuPos == 0)
+			{
+				//can go right
+				menuPos = 1;
+			}
+
+			SDL_SetRenderDrawColor(screen->renderer, 0x00, 0x00, 0x00, 0xFF);
+			SDL_RenderClear(screen->renderer);
+			Image *img = menu[menuPos];
+			SDL_RenderCopy(screen->renderer, img->texture, img->bounds, screen->bounds);
+			SDL_RenderPresent(screen->renderer);
+		}
+	}
+}
+
 int main(int argc, char **argv)
 {
 
@@ -237,11 +304,7 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	// Run Game
-	runGame();
-
-	// Run Credits
-	//runCredits();
+	runMenu();
 
 	// Close Game
 	close();
