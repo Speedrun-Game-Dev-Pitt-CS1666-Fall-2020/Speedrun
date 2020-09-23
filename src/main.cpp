@@ -30,10 +30,30 @@ Image *loadImage(const char *, int, int);
 void runCredits();
 void runGame();
 void runMenu();
+SDL_Texture* loadTexture(std::string);
 
 Image *loadImage(const char *src, int w, int h)
 {
 	return new Image(screen, src, 0, 0, w, h);
+}
+
+SDL_Texture* loadTexture(std::string fname) {
+	SDL_Texture* newText = nullptr;
+
+	SDL_Surface* startSurf = IMG_Load(fname.c_str());
+	if (startSurf == nullptr) {
+		std::cout << "Unable to load image " << fname << "! SDL Error: " << SDL_GetError() << std::endl;
+		return nullptr;
+	}
+
+	newText = SDL_CreateTextureFromSurface(screen->renderer, startSurf);
+	if (newText == nullptr) {
+		std::cout << "Unable to create texture from " << fname << "! SDL Error: " << SDL_GetError() << std::endl;
+	}
+
+	SDL_FreeSurface(startSurf);
+
+	return newText;
 }
 
 bool init()
@@ -136,7 +156,7 @@ void runCredits()
 
 void runGame()
 {
-
+	SDL_Texture* guy = loadTexture("../res/Guy.png");
 	// Current position to render the box
 	// Start off with it in the middle
 	int x_pos = SCREEN_WIDTH / 2 - BOX_WIDTH / 2;
@@ -230,10 +250,9 @@ void runGame()
 		// Clear black
 		SDL_SetRenderDrawColor(screen->renderer, 0x00, 0x00, 0x00, 0xFF);
 		SDL_RenderClear(screen->renderer);
-		// Cyan box
-		SDL_SetRenderDrawColor(screen->renderer, 0x00, 0xFF, 0xFF, 0xFF);
-		SDL_Rect fillRect = {x_pos, y_pos, BOX_WIDTH, BOX_HEIGHT};
-		SDL_RenderFillRect(screen->renderer, &fillRect);
+		// Player box
+		SDL_Rect player = {x_pos, y_pos, BOX_WIDTH, BOX_HEIGHT};
+		SDL_RenderCopy(screen->renderer, guy, NULL, &player);
 		SDL_RenderPresent(screen->renderer);
 	}
 }
