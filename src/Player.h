@@ -23,4 +23,9 @@ public:
     Player(int x, int y, int w, int h, SDL_Texture* t);
     void updatePosition();
 
+    void applyForces();
+
+    void detectCollisions();
+    bool isColliding(SDL_Rect r);
+
 };

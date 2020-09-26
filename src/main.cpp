@@ -164,16 +164,11 @@ void runGame()
 	bool gameon = true;
 	while (gameon)
 	{
-		if (user->y_pos < SCREEN_HEIGHT - BOX_HEIGHT)
-		{
-			user->y_vel += user->y_accel;
-		}
-		else
-		{
-			user->y_pos = SCREEN_HEIGHT - BOX_HEIGHT;
-			user->y_vel = 0;
-		}
 
+		//apply forces based off gravity and collisions
+		user->applyForces();
+
+		//get intended motion based off input
 		while (SDL_PollEvent(&e))
 		{
 			const Uint8 *keystate = SDL_GetKeyboardState(nullptr);
@@ -187,7 +182,10 @@ void runGame()
 				switch (e.key.keysym.sym)
 				{
 				case SDLK_w:
-					user->y_vel = -15;
+					if(!user->isJumping){
+						user->y_vel = -15;
+						user->isJumping = true;
+					}
 					break;
 
 				case SDLK_a:
