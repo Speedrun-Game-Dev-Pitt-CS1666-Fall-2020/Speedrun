@@ -5,6 +5,7 @@
 #include "SimplexNoise.h"
 #include "Screen.h"
 #include "Image.h"
+#include "Player.h"
 
 #define CREDIT_SIZE 10
 #define MENU_SIZE 2
@@ -156,31 +157,21 @@ void runCredits()
 
 void runGame()
 {
-	SDL_Texture* guy = loadTexture("../res/Guy.png");
-	// Current position to render the box
-	// Start off with it in the middle
-	int x_pos = SCREEN_WIDTH / 2 - BOX_WIDTH / 2;
-	int y_pos = 0;
-
-	// Current velocity of the box
-	// Start off at reset
-	int x_vel = 0;
-	int y_vel = 0;
-	int y_accel = 1;
+	// Create player object with x, y, w, h, texture
+	Player* user = new Player(10, 0, 20, 20, loadTexture("../res/Guy.png"));
 
 	SDL_Event e;
 	bool gameon = true;
 	while (gameon)
 	{
-
-		if (y_pos < SCREEN_HEIGHT - BOX_HEIGHT)
+		if (user->y_pos < SCREEN_HEIGHT - BOX_HEIGHT)
 		{
-			y_vel += y_accel;
+			user->y_vel += user->y_accel;
 		}
 		else
 		{
-			y_pos = SCREEN_HEIGHT - BOX_HEIGHT;
-			y_vel = 0;
+			user->y_pos = SCREEN_HEIGHT - BOX_HEIGHT;
+			user->y_vel = 0;
 		}
 
 		while (SDL_PollEvent(&e))
@@ -196,11 +187,11 @@ void runGame()
 				switch (e.key.keysym.sym)
 				{
 				case SDLK_w:
-					y_vel = -15;
+					user->y_vel = -15;
 					break;
 
 				case SDLK_a:
-					x_vel = -4;
+					user->x_vel = -4;
 					break;
 
 				case SDLK_s:
@@ -208,13 +199,13 @@ void runGame()
 					break;
 
 				case SDLK_d:
-					x_vel = 4;
+					user->x_vel = 4;
 
 					break;
 
 				default:
-					x_vel = 0;
-					y_vel = 0;
+					user->x_vel = 0;
+					user->y_vel = 0;
 					break;
 				}
 			}
@@ -227,7 +218,7 @@ void runGame()
 
 				case SDLK_a:
 					if (!keystate[SDL_SCANCODE_D])
-						x_vel = 0;
+						user->x_vel = 0;
 					break;
 
 				case SDLK_s:
@@ -236,24 +227,24 @@ void runGame()
 
 				case SDLK_d:
 					if (!keystate[SDL_SCANCODE_A])
-						x_vel = 0;
+						user->x_vel = 0;
 					break;
 				}
 			}
 		}
 
 		// Move box
-		x_pos += x_vel;
-		y_pos += y_vel;
-
+		user->updatePosition();
+		
 		// Draw box
 		// Clear black
 		SDL_SetRenderDrawColor(screen->renderer, 0x00, 0x00, 0x00, 0xFF);
 		SDL_RenderClear(screen->renderer);
 		// Player box
-		SDL_Rect player = {x_pos, y_pos, BOX_WIDTH, BOX_HEIGHT};
-		SDL_RenderCopy(screen->renderer, guy, NULL, &player);
+		SDL_Rect player_rect = {user->x_pos, user->y_pos, user->width, user->height};
+		SDL_RenderCopy(screen->renderer, user->player_texture, NULL, &player_rect);
 		SDL_RenderPresent(screen->renderer);
+		
 	}
 }
 
