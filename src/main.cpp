@@ -30,6 +30,7 @@ Image *loadImage(const char *, int, int);
 void runCredits();
 void runGame();
 void runMenu();
+void generateTerrain();
 SDL_Texture* loadTexture(std::string);
 
 Image *loadImage(const char *src, int w, int h)
@@ -170,9 +171,9 @@ void runGame()
 
 	SDL_Event e;
 	bool gameon = true;
+	generateTerrain();
 	while (gameon)
 	{
-
 		if (y_pos < SCREEN_HEIGHT - BOX_HEIGHT)
 		{
 			y_vel += y_accel;
@@ -249,7 +250,6 @@ void runGame()
 		// Draw box
 		// Clear black
 		SDL_SetRenderDrawColor(screen->renderer, 0x00, 0x00, 0x00, 0xFF);
-		SDL_RenderClear(screen->renderer);
 		// Player box
 		SDL_Rect player = {x_pos, y_pos, BOX_WIDTH, BOX_HEIGHT};
 		SDL_RenderCopy(screen->renderer, guy, NULL, &player);
@@ -311,6 +311,42 @@ void runMenu()
 		}
 	}
 }
+void generateTerrain()
+{
+	SimplexNoise *simp = new SimplexNoise(420);
+	simp->freq = 0.07f;
+	simp->octaves = 2;
+	simp->updateFractalBounds();
+	int cave_nums[SCREEN_HEIGHT / BOX_HEIGHT];
+	//load texture
+	SDL_Texture* block_texture = loadTexture("../res/block.png");
+	SDL_Texture* background_texture = loadTexture("../res/background_block.png");
+	
+	for (int test = -18; test < 18; test++)
+	{
+		float val_f = simp->getSingle(1,test)*100;
+		int val_i = (int)val_f;
+		cave_nums[test+18] = val_i;
+	}
+	for (int y = 0; y < SCREEN_HEIGHT; y = y + BOX_HEIGHT)
+	{
+		for(int x = 0; x < SCREEN_WIDTH; x = x + BOX_WIDTH)
+		{
+			int ratio = (float)x / (float)SCREEN_WIDTH * 100;
+			if((ratio <cave_nums[y / BOX_HEIGHT] - 10) || (ratio > cave_nums[y / BOX_HEIGHT] + 10))
+			{
+				SDL_Rect block = {x,y,BOX_WIDTH,BOX_HEIGHT};
+				SDL_RenderCopy(screen->renderer,block_texture,NULL,&block);
+			}
+			else
+			{
+				SDL_Rect block = {x,y,BOX_WIDTH,BOX_HEIGHT};
+				SDL_RenderCopy(screen->renderer,background_texture,NULL,&block);
+			}
+		}
+	}
+}
+
 
 int main(int argc, char **argv)
 {
