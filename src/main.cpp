@@ -177,9 +177,9 @@ void runGame()
 			{
 				gameon = false;
 			}
-			else if (e.type == SDL_KEYDOWN)
+			else
 			{
-
+				/*
 				switch (e.key.keysym.sym)
 				{
 				case SDLK_w:
@@ -204,13 +204,34 @@ void runGame()
 					user->x_accel = 0.5;
 
 					break;
+				}
+				*/
+				if(keystate[SDL_SCANCODE_W]){
 
-				default:
-					//user->x_vel = 0;
-					//user->y_vel = 0;
-					break;
+					if (!user->isJumping)
+					{
+						user->y_vel += -15;
+						user->isJumping = true;
+					}
+
+				}
+				if(keystate[SDL_SCANCODE_A]){
+					//user->x_accel = -0.5;
+					if(user->x_vel > -4){
+						user->x_vel += -0.5;
+					}
+				}
+				if(keystate[SDL_SCANCODE_D]){
+					//user->x_accel = 0.5;
+					if(user->x_vel < 4){
+						user->x_vel += 0.5;
+					}
+				}
+				if(keystate[SDL_SCANCODE_S]){
+					
 				}
 			}
+			/*
 			else if (e.type == SDL_KEYUP)
 			{
 				switch (e.key.keysym.sym)
@@ -235,6 +256,7 @@ void runGame()
 					break;
 				}
 			}
+			*/
 		}
 
 		// Move box

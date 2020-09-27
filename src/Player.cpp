@@ -37,6 +37,9 @@ void Player::detectCollisions()
         y_pos = 720 - height;
         //y_vel = 0;
         //y_accel = 0;
+        if(y_accel > 0){
+            y_accel = 0;
+        }
         isJumping = false;
     }
 }
