@@ -7,7 +7,7 @@ Player::Player(float x, float y, int w, int h, SDL_Texture *t) : x_pos{x}, y_pos
     x_accel = 0;
     //gravity
     y_accel = 1;
-    isJumping = false;
+    isJumping = true;
 }
 
 void Player::updatePosition()
@@ -37,8 +37,8 @@ void Player::detectCollisions()
         y_pos = 720 - height;
         //y_vel = 0;
         //y_accel = 0;
-        if(y_accel > 0){
-            y_accel = 0;
+        if(y_vel > 0){
+            y_vel = 0;
         }
         isJumping = false;
     }

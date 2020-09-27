@@ -179,33 +179,7 @@ void runGame()
 			}
 			else
 			{
-				/*
-				switch (e.key.keysym.sym)
-				{
-				case SDLK_w:
-					if (!user->isJumping)
-					{
-						user->y_vel = -15;
-						user->isJumping = true;
-					}
-					break;
 
-				case SDLK_a:
-					//user->x_vel = -4;
-					user->x_accel = -0.5;
-					break;
-
-				case SDLK_s:
-					//y_vel = 1;
-					break;
-
-				case SDLK_d:
-					//user->x_vel = 4;
-					user->x_accel = 0.5;
-
-					break;
-				}
-				*/
 				if(keystate[SDL_SCANCODE_W]){
 
 					if (!user->isJumping)
@@ -217,46 +191,20 @@ void runGame()
 				}
 				if(keystate[SDL_SCANCODE_A]){
 					//user->x_accel = -0.5;
-					if(user->x_vel > -4){
-						user->x_vel += -0.5;
+					if(user->x_vel > -6){
+						user->x_vel += -1;
 					}
 				}
 				if(keystate[SDL_SCANCODE_D]){
 					//user->x_accel = 0.5;
-					if(user->x_vel < 4){
-						user->x_vel += 0.5;
+					if(user->x_vel < 6){
+						user->x_vel += 1;
 					}
 				}
 				if(keystate[SDL_SCANCODE_S]){
 					
 				}
 			}
-			/*
-			else if (e.type == SDL_KEYUP)
-			{
-				switch (e.key.keysym.sym)
-				{
-				case SDLK_w:
-					break;
-
-				case SDLK_a:
-					if (!keystate[SDL_SCANCODE_D])
-						//user->x_vel = 0;
-						user->x_accel = 0;
-					break;
-
-				case SDLK_s:
-					//y_vel = 0;
-					break;
-
-				case SDLK_d:
-					if (!keystate[SDL_SCANCODE_A])
-						//user->x_vel = 0;
-						user->x_accel = 0;
-					break;
-				}
-			}
-			*/
 		}
 
 		// Move box
