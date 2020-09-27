@@ -31,24 +31,27 @@ Image *loadImage(const char *, int, int);
 void runCredits();
 void runGame();
 void runMenu();
-SDL_Texture* loadTexture(std::string);
+SDL_Texture *loadTexture(std::string);
 
 Image *loadImage(const char *src, int w, int h)
 {
 	return new Image(screen, src, 0, 0, w, h);
 }
 
-SDL_Texture* loadTexture(std::string fname) {
-	SDL_Texture* newText = nullptr;
+SDL_Texture *loadTexture(std::string fname)
+{
+	SDL_Texture *newText = nullptr;
 
-	SDL_Surface* startSurf = IMG_Load(fname.c_str());
-	if (startSurf == nullptr) {
+	SDL_Surface *startSurf = IMG_Load(fname.c_str());
+	if (startSurf == nullptr)
+	{
 		std::cout << "Unable to load image " << fname << "! SDL Error: " << SDL_GetError() << std::endl;
 		return nullptr;
 	}
 
 	newText = SDL_CreateTextureFromSurface(screen->renderer, startSurf);
-	if (newText == nullptr) {
+	if (newText == nullptr)
+	{
 		std::cout << "Unable to create texture from " << fname << "! SDL Error: " << SDL_GetError() << std::endl;
 	}
 
@@ -106,15 +109,14 @@ void runCredits()
 		loadImage("../res/spencer.png", 1280, 720),
 		loadImage("../res/ryanyang.png", 1280, 720)};
 
-	
 	float dt;
 
 	while (!screen->isClosed())
 	{
-		const Uint8* keystate = SDL_GetKeyboardState(nullptr);
+		const Uint8 *keystate = SDL_GetKeyboardState(nullptr);
 		SDL_Event e;
-		if(keystate[SDL_SCANCODE_ESCAPE] || e.type == SDL_QUIT)
-				return;
+		if (keystate[SDL_SCANCODE_ESCAPE] || e.type == SDL_QUIT)
+			return;
 
 		now = SDL_GetTicks();
 		delta = now - then;
@@ -158,22 +160,16 @@ void runCredits()
 void runGame()
 {
 	// Create player object with x, y, w, h, texture
-	Player* user = new Player(10, 0, 20, 20, loadTexture("../res/Guy.png"));
+	Player *user = new Player(10, 0, 20, 20, loadTexture("../res/Guy.png"));
 
 	SDL_Event e;
 	bool gameon = true;
 	while (gameon)
 	{
-		if (user->y_pos < SCREEN_HEIGHT - BOX_HEIGHT)
-		{
-			user->y_vel += user->y_accel;
-		}
-		else
-		{
-			user->y_pos = SCREEN_HEIGHT - BOX_HEIGHT;
-			user->y_vel = 0;
-		}
 
+		user->applyForces();
+
+		//get intended motion based off input
 		while (SDL_PollEvent(&e))
 		{
 			const Uint8 *keystate = SDL_GetKeyboardState(nullptr);
@@ -187,11 +183,16 @@ void runGame()
 				switch (e.key.keysym.sym)
 				{
 				case SDLK_w:
-					user->y_vel = -15;
+					if (!user->isJumping)
+					{
+						user->y_vel = -15;
+						user->isJumping = true;
+					}
 					break;
 
 				case SDLK_a:
-					user->x_vel = -4;
+					//user->x_vel = -4;
+					user->x_accel = -0.5;
 					break;
 
 				case SDLK_s:
@@ -199,13 +200,14 @@ void runGame()
 					break;
 
 				case SDLK_d:
-					user->x_vel = 4;
+					//user->x_vel = 4;
+					user->x_accel = 0.5;
 
 					break;
 
 				default:
-					user->x_vel = 0;
-					user->y_vel = 0;
+					//user->x_vel = 0;
+					//user->y_vel = 0;
 					break;
 				}
 			}
@@ -218,7 +220,8 @@ void runGame()
 
 				case SDLK_a:
 					if (!keystate[SDL_SCANCODE_D])
-						user->x_vel = 0;
+						//user->x_vel = 0;
+						user->x_accel = 0;
 					break;
 
 				case SDLK_s:
@@ -227,7 +230,8 @@ void runGame()
 
 				case SDLK_d:
 					if (!keystate[SDL_SCANCODE_A])
-						user->x_vel = 0;
+						//user->x_vel = 0;
+						user->x_accel = 0;
 					break;
 				}
 			}
@@ -235,7 +239,11 @@ void runGame()
 
 		// Move box
 		user->updatePosition();
-		
+
+		//check constraints and resolve conflicts
+		//apply forces based off gravity and collisions
+		user->detectCollisions();
+
 		// Draw box
 		// Clear black
 		SDL_SetRenderDrawColor(screen->renderer, 0x00, 0x00, 0x00, 0xFF);
@@ -244,7 +252,6 @@ void runGame()
 		SDL_Rect player_rect = {user->x_pos, user->y_pos, user->width, user->height};
 		SDL_RenderCopy(screen->renderer, user->player_texture, NULL, &player_rect);
 		SDL_RenderPresent(screen->renderer);
-		
 	}
 }
 
