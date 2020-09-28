@@ -16,7 +16,7 @@ public:
     int width;
     int height;
 
-    bool isJumping;
+    bool cantJump;
 
     SDL_Texture *player_texture;
 
@@ -25,7 +25,7 @@ public:
 
     void applyForces();
 
-    void detectCollisions(SDL_Rect* r);
+    void detectCollisions(SDL_Rect* r,  SDL_Rect* r2);
     bool isColliding(SDL_Rect* r);
     void handleCollision(SDL_Rect* r);
     

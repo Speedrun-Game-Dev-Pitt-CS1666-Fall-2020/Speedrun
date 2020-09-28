@@ -1,4 +1,5 @@
 #include "Player.h"
+#include <cmath>
 
 Player::Player(float x, float y, int w, int h, SDL_Texture *t) : x_pos{x}, y_pos{y}, width{w}, height{h}, player_texture{t}
 {
@@ -7,7 +8,7 @@ Player::Player(float x, float y, int w, int h, SDL_Texture *t) : x_pos{x}, y_pos
     x_accel = 0;
     //gravity
     y_accel = 1;
-    isJumping = true;
+    cantJump = true;
 }
 
 void Player::updatePosition()
@@ -27,8 +28,11 @@ void Player::applyForces()
     y_vel += y_accel;
 }
 
-void Player::detectCollisions(SDL_Rect* r)
+void Player::detectCollisions(SDL_Rect* r, SDL_Rect* r2)
 {
+
+    //cant jump unless detech collision with some floor
+    cantJump = true;
 
     //go thru all possible collision things and checkCollision/apply force
     //for colliding with bottom of screen
@@ -40,11 +44,13 @@ void Player::detectCollisions(SDL_Rect* r)
         if(y_vel > 0){
             y_vel = 0;
         }
-        isJumping = false;
+        cantJump = false;
     }
 
     if (isColliding(r)) 
         handleCollision(r);
+    if (isColliding(r2)) 
+        handleCollision(r2);
 }
 
 bool Player::isColliding(SDL_Rect* r) {
@@ -64,6 +70,50 @@ bool Player::isColliding(SDL_Rect* r) {
 	return true;
 }
 
+//assuming detect collisions will never change player velocity variables
+//spring traps + friction and stuff change accel variables
 void Player::handleCollision(SDL_Rect* r) {
     //Check player velocity direction for 
+
+    //get the x and y constraints for box based off of velocity direction
+    float requiredX = 0;
+    float requiredY = 0;
+    
+    if(x_vel < 0){
+        //hitting collision object from right
+        //need x pos of player to be box + boxwidth
+        requiredX = r->x + r->w;
+    }else{
+        //hitting collision object from left
+        //need x pos of player to be box - playerwidth
+        requiredX = r->x - width;
+    }
+
+    if(y_vel < 0){
+        //hitting collision object from bot
+        //need y pos of player to be box+boxheight
+        requiredY = r->y + r->h;
+    }else{
+        //hitting collision object from top
+        //need y pos of player to be box - playerheight
+        requiredY = r->y - height;
+        //moved on top of object
+        cantJump = false;
+    }
+
+    //what is closer? complementary X to x_pos or complementary y to y_pos?
+    if(fabs(y_pos - requiredY) < fabs(x_pos - requiredX)){
+        //x_pos = complementaryX;
+        y_pos = requiredY;
+        y_vel = 0;
+    }else{
+        //use requiredX bc compY closer
+        x_pos = requiredX;
+        //y_pos = complementaryY;
+        x_vel = 0;
+    }
+
+    //if moving towards collisions in either x or y, set velocity in that direction to 0
+
+
 }

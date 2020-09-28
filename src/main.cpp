@@ -161,7 +161,8 @@ void runGame()
 {
 	// Create player object with x, y, w, h, texture
 	Player *user = new Player(10, 0, 20, 20, loadTexture("../res/Guy.png"));
-	SDL_Rect block = {SCREEN_WIDTH/2, SCREEN_HEIGHT-20, 20, 20};
+	SDL_Rect block = {SCREEN_WIDTH/2, SCREEN_HEIGHT-20, 200, 20};
+	SDL_Rect anotherBlock = {SCREEN_WIDTH/2 - 190, SCREEN_HEIGHT-100, 120, 20};
 
 	SDL_Event e;
 	bool gameon = true;
@@ -183,23 +184,23 @@ void runGame()
 
 				if(keystate[SDL_SCANCODE_W]){
 
-					if (!user->isJumping)
+					if (!user->cantJump)
 					{
 						user->y_vel += -15;
-						user->isJumping = true;
+						user->cantJump = true;
 					}
 
 				}
 				if(keystate[SDL_SCANCODE_A]){
 					//user->x_accel = -0.5;
-					if(user->x_vel > -6){
-						user->x_vel += -1;
+					if(user->x_vel > -4){
+						user->x_vel += -2;
 					}
 				}
 				if(keystate[SDL_SCANCODE_D]){
 					//user->x_accel = 0.5;
-					if(user->x_vel < 6){
-						user->x_vel += 1;
+					if(user->x_vel < 4){
+						user->x_vel += 2;
 					}
 				}
 				if(keystate[SDL_SCANCODE_S]){
@@ -213,8 +214,7 @@ void runGame()
 
 		//check constraints and resolve conflicts
 		//apply forces based off gravity and collisions
-		user->detectCollisions(&block);
-
+		user->detectCollisions(&block, &anotherBlock);
 		
 		// Clear black
 		SDL_SetRenderDrawColor(screen->renderer, 0x00, 0x00, 0x00, 0xFF);
@@ -223,6 +223,9 @@ void runGame()
 		// Draw box
 		SDL_SetRenderDrawColor(screen->renderer, 0xFF, 0x00, 0x00, 0xFF);
 		SDL_RenderFillRect(screen->renderer, &block);
+		// Draw another box
+		SDL_SetRenderDrawColor(screen->renderer, 0xFF, 0x00, 0x00, 0xFF);
+		SDL_RenderFillRect(screen->renderer, &anotherBlock);
 
 		// Player box
 		SDL_Rect player_rect = {user->x_pos, user->y_pos, user->width, user->height};
