@@ -27,7 +27,7 @@ void Player::applyForces()
     y_vel += y_accel;
 }
 
-void Player::detectCollisions()
+void Player::detectCollisions(SDL_Rect* r)
 {
 
     //go thru all possible collision things and checkCollision/apply force
@@ -42,4 +42,28 @@ void Player::detectCollisions()
         }
         isJumping = false;
     }
+
+    if (isColliding(r)) 
+        handleCollision(r);
+}
+
+bool Player::isColliding(SDL_Rect* r) {
+	// Check vertical overlap
+	if (y_pos + height <= r->y)
+		return false;
+	if (y_pos >= r->y + r->h)
+		return false;
+
+	// Check horizontal overlap
+	if (x_pos >= r->x + r->w)
+		return false;
+	if (x_pos + width <= r->x)
+		return false;
+
+	// Must overlap in both
+	return true;
+}
+
+void Player::handleCollision(SDL_Rect* r) {
+    //Check player velocity direction for 
 }

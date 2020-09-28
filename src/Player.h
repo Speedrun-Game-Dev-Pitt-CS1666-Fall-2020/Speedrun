@@ -25,6 +25,8 @@ public:
 
     void applyForces();
 
-    void detectCollisions();
-    bool isColliding(SDL_Rect r);
+    void detectCollisions(SDL_Rect* r);
+    bool isColliding(SDL_Rect* r);
+    void handleCollision(SDL_Rect* r);
+    
 };
