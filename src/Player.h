@@ -12,6 +12,7 @@ public:
     float y_vel;
     float x_accel;
     float y_accel;
+    float friction;
 
     int width;
     int height;

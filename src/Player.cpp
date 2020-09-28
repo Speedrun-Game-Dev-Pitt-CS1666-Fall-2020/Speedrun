@@ -9,6 +9,7 @@ Player::Player(float x, float y, int w, int h, SDL_Texture *t) : x_pos{x}, y_pos
     //gravity
     y_accel = 1;
     cantJump = true;
+    friction = .3;
 }
 
 void Player::updatePosition()
@@ -25,10 +26,43 @@ void Player::applyForces()
     //apply gravity. by default starts at gravity of 1
 
     x_vel += x_accel;
+    
+    if (x_vel > 0)
+    {
+        if (x_vel - friction < 0)
+        {
+            x_vel = 0;
+        }
+        else
+        {
+            x_vel -= friction;
+        }
+        
+    }
+    else if (x_vel < 0) 
+    {
+        if (x_vel + friction > 0)
+        {
+            x_vel = 0;
+        }
+        else
+        {
+            x_vel += friction;
+        }
+    }
+
+    if (x_vel > 4)
+        x_vel = 4;
+
+    if (x_vel < -4)
+        x_vel = -4;
+
     y_vel += y_accel;
+
+
 }
 
-void Player::detectCollisions(SDL_Rect* r, SDL_Rect* r2)
+void Player::detectCollisions(SDL_Rect *r, SDL_Rect *r2)
 {
 
     //cant jump unless detech collision with some floor
@@ -41,59 +75,68 @@ void Player::detectCollisions(SDL_Rect* r, SDL_Rect* r2)
         y_pos = 720 - height;
         //y_vel = 0;
         //y_accel = 0;
-        if(y_vel > 0){
+        if (y_vel > 0)
+        {
             y_vel = 0;
         }
         cantJump = false;
     }
 
-    if (isColliding(r)) 
+    if (isColliding(r))
         handleCollision(r);
-    if (isColliding(r2)) 
+    if (isColliding(r2))
         handleCollision(r2);
 }
 
-bool Player::isColliding(SDL_Rect* r) {
-	// Check vertical overlap
-	if (y_pos + height <= r->y)
-		return false;
-	if (y_pos >= r->y + r->h)
-		return false;
+bool Player::isColliding(SDL_Rect *r)
+{
+    // Check vertical overlap
+    if (y_pos + height <= r->y)
+        return false;
+    if (y_pos >= r->y + r->h)
+        return false;
 
-	// Check horizontal overlap
-	if (x_pos >= r->x + r->w)
-		return false;
-	if (x_pos + width <= r->x)
-		return false;
+    // Check horizontal overlap
+    if (x_pos >= r->x + r->w)
+        return false;
+    if (x_pos + width <= r->x)
+        return false;
 
-	// Must overlap in both
-	return true;
+    // Must overlap in both
+    return true;
 }
 
 //assuming detect collisions will never change player velocity variables
 //spring traps + friction and stuff change accel variables
-void Player::handleCollision(SDL_Rect* r) {
-    //Check player velocity direction for 
+void Player::handleCollision(SDL_Rect *r)
+{
+    //Check player velocity direction for
 
     //get the x and y constraints for box based off of velocity direction
     float requiredX = 0;
     float requiredY = 0;
-    
-    if(x_vel < 0){
+
+    if (x_vel < 0)
+    {
         //hitting collision object from right
         //need x pos of player to be box + boxwidth
         requiredX = r->x + r->w;
-    }else{
+    }
+    else
+    {
         //hitting collision object from left
         //need x pos of player to be box - playerwidth
         requiredX = r->x - width;
     }
 
-    if(y_vel < 0){
+    if (y_vel < 0)
+    {
         //hitting collision object from bot
         //need y pos of player to be box+boxheight
         requiredY = r->y + r->h;
-    }else{
+    }
+    else
+    {
         //hitting collision object from top
         //need y pos of player to be box - playerheight
         requiredY = r->y - height;
@@ -102,18 +145,20 @@ void Player::handleCollision(SDL_Rect* r) {
     }
 
     //what is closer? complementary X to x_pos or complementary y to y_pos?
-    if(fabs(y_pos - requiredY) < fabs(x_pos - requiredX)){
+    if (fabs(y_pos - requiredY) < fabs(x_pos - requiredX))
+    {
         //x_pos = complementaryX;
         y_pos = requiredY;
         y_vel = 0;
-    }else{
+    }
+    else
+    {
         //use requiredX bc compY closer
         x_pos = requiredX;
         //y_pos = complementaryY;
         x_vel = 0;
+        x_accel = 0;
     }
 
     //if moving towards collisions in either x or y, set velocity in that direction to 0
-
-
 }

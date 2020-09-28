@@ -192,19 +192,24 @@ void runGame()
 
 				}
 				if(keystate[SDL_SCANCODE_A]){
-					//user->x_accel = -0.5;
-					if(user->x_vel > -4){
-						user->x_vel += -2;
-					}
+					user->x_accel = -0.5;
+					// if(user->x_vel > -4){
+					// 	user->x_vel += -2;
+					// }
 				}
 				if(keystate[SDL_SCANCODE_D]){
-					//user->x_accel = 0.5;
-					if(user->x_vel < 4){
-						user->x_vel += 2;
-					}
+					user->x_accel = 0.5;
+					// if(user->x_vel < 4){
+					// 	user->x_vel += 2;
+					// }
 				}
 				if(keystate[SDL_SCANCODE_S]){
 					
+				}
+
+				if (!keystate[SDL_SCANCODE_A] && !keystate[SDL_SCANCODE_D])
+				{
+					user->x_accel = 0;
 				}
 			}
 		}
