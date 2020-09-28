@@ -62,7 +62,7 @@ void Player::applyForces()
 
 }
 
-void Player::detectCollisions(SDL_Rect *r, SDL_Rect *r2)
+void Player::detectCollisions(std::vector <SDL_Rect> r)
 {
 
     //cant jump unless detech collision with some floor
@@ -82,10 +82,15 @@ void Player::detectCollisions(SDL_Rect *r, SDL_Rect *r2)
         cantJump = false;
     }
 
-    if (isColliding(r))
-        handleCollision(r);
-    if (isColliding(r2))
-        handleCollision(r2);
+    for (auto block: r)
+    {
+        if (isColliding(&block))
+            handleCollision(&block);
+    }
+    // if (isColliding(r))
+    //     handleCollision(r);
+    // if (isColliding(r2))
+    //     handleCollision(r2);
 }
 
 bool Player::isColliding(SDL_Rect *r)
@@ -150,6 +155,12 @@ void Player::handleCollision(SDL_Rect *r)
         //x_pos = complementaryX;
         y_pos = requiredY;
         y_vel = 0;
+
+        if (r->w == 100)
+        {
+            y_vel += -30;
+            cantJump = true;
+        }
     }
     else
     {

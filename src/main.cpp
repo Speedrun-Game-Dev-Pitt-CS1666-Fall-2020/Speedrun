@@ -1,4 +1,5 @@
 #include <iostream>
+#include <vector>
 #include <SDL.h>
 #include <SDL_image.h>
 #include "XorShifter.h"
@@ -161,8 +162,13 @@ void runGame()
 {
 	// Create player object with x, y, w, h, texture
 	Player *user = new Player(10, 0, 20, 20, loadTexture("../res/Guy.png"));
+
+	//Define the blocks
 	SDL_Rect block = {SCREEN_WIDTH/2, SCREEN_HEIGHT-20, 200, 20};
-	SDL_Rect anotherBlock = {SCREEN_WIDTH/2 - 190, SCREEN_HEIGHT-100, 120, 20};
+	SDL_Rect anotherBlock = {SCREEN_WIDTH/2 - 190, SCREEN_HEIGHT-120, 120, 20};
+	SDL_Rect spring = {SCREEN_WIDTH/2 - 300, SCREEN_HEIGHT-180, 100, 20};
+
+	std::vector <SDL_Rect> blocks = {block, anotherBlock, spring};
 
 	SDL_Event e;
 	bool gameon = true;
@@ -219,18 +225,20 @@ void runGame()
 
 		//check constraints and resolve conflicts
 		//apply forces based off gravity and collisions
-		user->detectCollisions(&block, &anotherBlock);
+		user->detectCollisions(blocks);
 		
 		// Clear black
 		SDL_SetRenderDrawColor(screen->renderer, 0x00, 0x00, 0x00, 0xFF);
 		SDL_RenderClear(screen->renderer);
 
-		// Draw box
+		// Draw boxes
 		SDL_SetRenderDrawColor(screen->renderer, 0xFF, 0x00, 0x00, 0xFF);
-		SDL_RenderFillRect(screen->renderer, &block);
-		// Draw another box
-		SDL_SetRenderDrawColor(screen->renderer, 0xFF, 0x00, 0x00, 0xFF);
-		SDL_RenderFillRect(screen->renderer, &anotherBlock);
+		
+		for (auto bs: blocks)
+		{
+			SDL_RenderFillRect(screen->renderer, &bs);
+		}
+
 
 		// Player box
 		SDL_Rect player_rect = {user->x_pos, user->y_pos, user->width, user->height};

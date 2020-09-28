@@ -1,6 +1,7 @@
 #pragma once
 #include <SDL.h>
 #include <SDL_image.h>
+#include <vector>
 
 class Player
 {
@@ -26,7 +27,7 @@ public:
 
     void applyForces();
 
-    void detectCollisions(SDL_Rect* r,  SDL_Rect* r2);
+    void detectCollisions(std::vector <SDL_Rect> r);
     bool isColliding(SDL_Rect* r);
     void handleCollision(SDL_Rect* r);
     
