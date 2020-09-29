@@ -1,10 +1,12 @@
 #include <iostream>
+#include <vector>
 #include <SDL.h>
 #include <SDL_image.h>
 #include "XorShifter.h"
 #include "SimplexNoise.h"
 #include "Screen.h"
 #include "Image.h"
+#include "Player.h"
 
 #define CREDIT_SIZE 10
 #define MENU_SIZE 2
@@ -12,10 +14,8 @@
 constexpr int SCREEN_WIDTH = 1280;
 constexpr int SCREEN_HEIGHT = 720;
 
-//for move player tutorial, may move to player object later
-constexpr int BOX_WIDTH = 20;
-constexpr int BOX_HEIGHT = 20;
-
+constexpr int WORLD_DEPTH = 3000;
+constexpr int TILE_SIZE = 100;
 // Globals
 Screen *screen = nullptr;
 Uint32 before;
@@ -27,17 +27,19 @@ Uint32 now;
 bool init();
 void close();
 Image *loadImage(const char *, int, int);
+SDL_Texture* loadTexture(std::string fname);
 void runCredits();
 void runGame();
 void runMenu();
 void generateTerrain();
-SDL_Texture* loadTexture(std::string);
+//globals
+SDL_Texture* gBackground;
+SDL_Texture* dude;
 
 Image *loadImage(const char *src, int w, int h)
 {
 	return new Image(screen, src, 0, 0, w, h);
 }
-
 SDL_Texture* loadTexture(std::string fname) {
 	SDL_Texture* newText = nullptr;
 
@@ -106,15 +108,14 @@ void runCredits()
 		loadImage("../res/spencer.png", 1280, 720),
 		loadImage("../res/ryanyang.png", 1280, 720)};
 
-	
 	float dt;
 
 	while (!screen->isClosed())
 	{
-		const Uint8* keystate = SDL_GetKeyboardState(nullptr);
+		const Uint8 *keystate = SDL_GetKeyboardState(nullptr);
 		SDL_Event e;
-		if(keystate[SDL_SCANCODE_ESCAPE] || e.type == SDL_QUIT)
-				return;
+		if (keystate[SDL_SCANCODE_ESCAPE] || e.type == SDL_QUIT)
+			return;
 
 		now = SDL_GetTicks();
 		delta = now - then;
@@ -157,102 +158,123 @@ void runCredits()
 
 void runGame()
 {
-	SDL_Texture* guy = loadTexture("../res/Guy.png");
-	// Current position to render the box
-	// Start off with it in the middle
-	int x_pos = SCREEN_WIDTH / 2 - BOX_WIDTH / 2;
-	int y_pos = 0;
+	//my stuff
+	//generateTerrain();
+	gBackground = loadTexture("../res/background.png");
+	int scroll_offset = 0;
+	int rem = 0;
+	SDL_Rect moveBox = {SCREEN_WIDTH/2 - TILE_SIZE/2, SCREEN_HEIGHT/2 - TILE_SIZE/2, TILE_SIZE, TILE_SIZE};	
 
-	// Current velocity of the box
-	// Start off at reset
-	int x_vel = 0;
-	int y_vel = 0;
-	int y_accel = 1;
+	
+	int tthird = (SCREEN_HEIGHT / 3) - TILE_SIZE/2;
+	int bthird = (2 * SCREEN_HEIGHT/ 3) - TILE_SIZE/2;
+	
+	SDL_Rect playercam = {SCREEN_WIDTH/2 - TILE_SIZE/2, SCREEN_HEIGHT/2 - TILE_SIZE/2, TILE_SIZE, TILE_SIZE};
+	SDL_Rect bgRect = {0, 0, SCREEN_WIDTH, SCREEN_HEIGHT};
+	
+	// Create player object with x, y, w, h, texture
+	Player *user = new Player(10, 0, 100, 100, loadTexture("../res/Guy.png"));
+
+	//Define the blocks
+	SDL_Rect block = {900, 2900, 200, 20};
+	SDL_Rect anotherBlock = {SCREEN_WIDTH/2 - 190, SCREEN_HEIGHT-120, 120, 20};
+	SDL_Rect spring = {SCREEN_WIDTH/2 - 300, SCREEN_HEIGHT-180, 100, 20};
+
+	std::vector <SDL_Rect> blocks = {block, anotherBlock, spring};
 
 	SDL_Event e;
 	bool gameon = true;
-	generateTerrain();
 	while (gameon)
 	{
-		if (y_pos < SCREEN_HEIGHT - BOX_HEIGHT)
-		{
-			y_vel += y_accel;
-		}
-		else
-		{
-			y_pos = SCREEN_HEIGHT - BOX_HEIGHT;
-			y_vel = 0;
-		}
 
+		user->applyForces();
+
+		//get intended motion based off input
 		while (SDL_PollEvent(&e))
 		{
-			const Uint8 *keystate = SDL_GetKeyboardState(nullptr);
-			if (e.type == SDL_QUIT || keystate[SDL_SCANCODE_ESCAPE])
+			if (e.type == SDL_QUIT)
 			{
 				gameon = false;
 			}
-			else if (e.type == SDL_KEYDOWN)
-			{
-
-				switch (e.key.keysym.sym)
-				{
-				case SDLK_w:
-					y_vel = -15;
-					break;
-
-				case SDLK_a:
-					x_vel = -4;
-					break;
-
-				case SDLK_s:
-					//y_vel = 1;
-					break;
-
-				case SDLK_d:
-					x_vel = 4;
-
-					break;
-
-				default:
-					x_vel = 0;
-					y_vel = 0;
-					break;
-				}
-			}
-			else if (e.type == SDL_KEYUP)
-			{
-				switch (e.key.keysym.sym)
-				{
-				case SDLK_w:
-					break;
-
-				case SDLK_a:
-					if (!keystate[SDL_SCANCODE_D])
-						x_vel = 0;
-					break;
-
-				case SDLK_s:
-					//y_vel = 0;
-					break;
-
-				case SDLK_d:
-					if (!keystate[SDL_SCANCODE_A])
-						x_vel = 0;
-					break;
-				}
-			}
 		}
+		const Uint8 *keystate = SDL_GetKeyboardState(nullptr);
+		if(keystate[SDL_SCANCODE_W]){
 
+				if (!user->cantJump)
+				{
+					user->y_vel += -15;
+					user->cantJump = true;
+				}
+
+			}
+		if(keystate[SDL_SCANCODE_A]){
+				user->x_accel = -0.5;
+					// if(user->x_vel > -4){
+					// 	user->x_vel += -2;
+					// }
+			}
+		if(keystate[SDL_SCANCODE_D]){
+				user->x_accel = 0.5;
+					// if(user->x_vel < 4){
+					// 	user->x_vel += 2;
+					// }
+			}
+		if(keystate[SDL_SCANCODE_S]){
+					user->y_accel = 0.5;
+			}
+
+		if (!keystate[SDL_SCANCODE_A] && !keystate[SDL_SCANCODE_D])
+			{
+				user->x_accel = 0;
+			}
+	
 		// Move box
-		x_pos += x_vel;
-		y_pos += y_vel;
+		user->updatePosition();
+		//new
+		if (user->y_pos < (scroll_offset + tthird))
+			scroll_offset = user->y_pos - tthird;
+		else if (user->y_pos > (scroll_offset + bthird))
+			scroll_offset = user->y_pos - bthird;
 
-		// Draw box
+		if (scroll_offset < 0)
+			scroll_offset = 0;
+
+		if (scroll_offset + SCREEN_HEIGHT > WORLD_DEPTH)
+			scroll_offset = WORLD_DEPTH - SCREEN_HEIGHT;
+		//check constraints and resolve conflicts
+		//apply forces based off gravity and collisions
+		user->detectCollisions(blocks);
+		
 		// Clear black
 		SDL_SetRenderDrawColor(screen->renderer, 0x00, 0x00, 0x00, 0xFF);
+		SDL_RenderClear(screen->renderer);
+		//new
+		rem = scroll_offset % SCREEN_HEIGHT;
+		bgRect.y = -rem;
+		SDL_RenderCopy(screen->renderer, gBackground, nullptr, &bgRect);
+		bgRect.y += SCREEN_HEIGHT;
+		SDL_RenderCopy(screen->renderer, gBackground, nullptr, &bgRect);
+		// Draw boxes
+		SDL_SetRenderDrawColor(screen->renderer, 0xFF, 0x00, 0x00, 0xFF);
+		
+
+		//new
+		playercam.y = user->y_pos - scroll_offset;
+		playercam.x = user->x_pos;
 		// Player box
-		SDL_Rect player = {x_pos, y_pos, BOX_WIDTH, BOX_HEIGHT};
-		SDL_RenderCopy(screen->renderer, guy, NULL, &player);
+		SDL_Rect player_rect = {user->x_pos, user->y_pos, user->width, user->height};
+		SDL_RenderCopy(screen->renderer, user->player_texture, NULL, &playercam);
+		
+		for (auto b: blocks)
+		{//on screen  if b.y = bgRect.y to bgRect.y + 720
+	//position on screen = b.y - bgRect.y
+			if(b.y >= bgRect.y && b.y <= bgRect.y + 720)
+			{
+				SDL_Rect tempBlock = {b.x, b.y-bgRect.y,b.w, b.h};
+				SDL_RenderFillRect(screen->renderer, &tempBlock);
+			}
+		}
+		
 		SDL_RenderPresent(screen->renderer);
 	}
 }
@@ -317,7 +339,7 @@ void generateTerrain()
 	simp->freq = 0.07f;
 	simp->octaves = 2;
 	simp->updateFractalBounds();
-	int cave_nums[SCREEN_HEIGHT / BOX_HEIGHT];
+	int cave_nums[SCREEN_HEIGHT / TILE_SIZE];
 	//load texture
 	SDL_Texture* block_texture = loadTexture("../res/block.png");
 	SDL_Texture* background_texture = loadTexture("../res/background_block.png");
@@ -328,26 +350,24 @@ void generateTerrain()
 		int val_i = (int)val_f;
 		cave_nums[test+18] = val_i;
 	}
-	for (int y = 0; y < SCREEN_HEIGHT; y = y + BOX_HEIGHT)
+	for (int y = 0; y < SCREEN_HEIGHT; y = y + TILE_SIZE)
 	{
-		for(int x = 0; x < SCREEN_WIDTH; x = x + BOX_WIDTH)
+		for(int x = 0; x < SCREEN_WIDTH; x = x + TILE_SIZE)
 		{
 			int ratio = (float)x / (float)SCREEN_WIDTH * 100;
-			if((ratio <cave_nums[y / BOX_HEIGHT] - 10) || (ratio > cave_nums[y / BOX_HEIGHT] + 10))
+			if((ratio <cave_nums[y / TILE_SIZE] - 10) || (ratio > cave_nums[y / TILE_SIZE] + 10))
 			{
-				SDL_Rect block = {x,y,BOX_WIDTH,BOX_HEIGHT};
+				SDL_Rect block = {x,y,TILE_SIZE,TILE_SIZE};
 				SDL_RenderCopy(screen->renderer,block_texture,NULL,&block);
 			}
 			else
 			{
-				SDL_Rect block = {x,y,BOX_WIDTH,BOX_HEIGHT};
+				SDL_Rect block = {x,y,TILE_SIZE,TILE_SIZE};
 				SDL_RenderCopy(screen->renderer,background_texture,NULL,&block);
 			}
 		}
 	}
 }
-
-
 int main(int argc, char **argv)
 {
 
