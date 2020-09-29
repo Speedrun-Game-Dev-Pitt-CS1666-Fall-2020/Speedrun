@@ -16,7 +16,8 @@ constexpr int SCREEN_WIDTH = 1280;
 constexpr int SCREEN_HEIGHT = 720;
 
 //for move player tutorial, may move to player object later
-constexpr int BOX_SIZE = 20;
+constexpr int BOX_WIDTH = 20;
+constexpr int BOX_HEIGHT = 20;
 constexpr int WORLD_DEPTH = 3000;
 
 // Globals
@@ -102,12 +103,13 @@ Player* generateTerrain()
 	int rand (void);
 	
 	XorShifter *rng = new XorShifter(412001000);
+	
 	SimplexNoise *simp = new SimplexNoise(rand() % 1000000);
 	simp->freq = 0.05f;
 	simp->octaves = 2;
 	simp->updateFractalBounds();
 	
-	int cave_nums[SCREEN_HEIGHT / BOX_SIZE];
+	int cave_nums[SCREEN_HEIGHT / BOX_HEIGHT];
 	
 	//SDL_Texture* block_texture = loadTexture("../res/block.png");
 	//SDL_Texture* background_texture = loadTexture("../res/background_block.png");
@@ -126,35 +128,43 @@ Player* generateTerrain()
 	Player *user;// = new Player(10, 0, 20, 20, loadTexture("../res/Guy.png"));
 	
 	//for each block on the screen
-	for (int y = 0; y < SCREEN_HEIGHT; y = y + BOX_SIZE)
+	for (int y = 0; y < SCREEN_HEIGHT; y = y + BOX_HEIGHT)
 	{
+		bool b = true;
 		
-		for (int x = 0; x < SCREEN_WIDTH; x = x + BOX_SIZE)
+		//"start" indicates the relative position of the left wall of the cave to the screen at a given elevation
+		int start = cave_nums[y / BOX_HEIGHT] - 11;
+		
+		//"end" indicates the relative position of the right wall of the cave to the screen at a given elevation
+		int end = cave_nums[y / BOX_HEIGHT] + 10;
+		
+		//for each block at elevation y, compare the relative x position of the block on the screen to the
+		//"start" and "end" positions
+		for (int x = 0; x < SCREEN_WIDTH; x = x + BOX_WIDTH)
 		{
-			//x position of block / screen width
+			//relative x position of the block on the screen
 			int ratio = (float)x / (float)SCREEN_WIDTH * 100;
 			
-			
-			//if the relative position of the block on the screen is more than 10 below or above 
-			//the given noise value for this row, render it as part of the walls
-			if ((ratio < cave_nums[y / BOX_SIZE] - 10) || (ratio > cave_nums[y / BOX_SIZE] + 10))
-			{	
-				SDL_Rect block = {x, y, BOX_SIZE, BOX_SIZE};
-				blocks.push_back(block);
-			}
-			//else, render it as part of the cave
-			else
+			//create the rectangle representing the left wall of the cave at elevation y when we reach the correct relative x position
+			if (ratio > start && b)
 			{
-				//SDL_Rect block = {x, y, BOX_WIDTH, BOX_HEIGHT};
+				SDL_Rect block = {0, y, BOX_WIDTH * (x / BOX_WIDTH), BOX_HEIGHT};
+				blocks.push_back(block);
+				b = false;
 				
-				//spawn the player in the first empty block
+				//spawn the player in at the first available "free" block
 				if (!player_created)
 				{
 					user = new Player(x, y, 20, 20, loadTexture("../res/Guy.png"));
 					player_created = true;
 				}
-				
-				//decorative_blocks.push_back(block);
+			}
+			//create the rectangle representing the right wall of the cave at elevation y when we reacht he correct relative x position
+			if (ratio > end)
+			{
+				SDL_Rect block = {x, y, BOX_WIDTH *100, BOX_HEIGHT};
+				blocks.push_back(block);
+				break;
 			}
 		}
 	}
