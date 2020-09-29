@@ -1,5 +1,6 @@
 #include <iostream>
 #include <vector>
+#include <time.h>
 #include <SDL.h>
 #include <SDL_image.h>
 #include "XorShifter.h"
@@ -24,6 +25,8 @@ Uint32 before;
 Uint32 then;
 Uint32 delta;
 Uint32 now;
+std::vector <SDL_Rect> blocks;
+std::vector <SDL_Rect> decorative_blocks;
 
 // Function declarations
 bool init();
@@ -32,6 +35,7 @@ Image *loadImage(const char *, int, int);
 void runCredits();
 void runGame();
 void runMenu();
+Player* generateTerrain();
 SDL_Texture *loadTexture(std::string);
 
 Image *loadImage(const char *src, int w, int h)
@@ -86,6 +90,77 @@ void close()
 	delete screen;
 	// Quit SDL subsystems
 	SDL_Quit();
+}
+
+//create blocks, add them to the blocks vector, and return a player at a valid spawn point
+Player* generateTerrain()
+{
+	blocks.clear();
+	decorative_blocks.clear();
+	
+	srand (time(NULL));
+	int rand (void);
+	
+	XorShifter *rng = new XorShifter(412001000);
+	SimplexNoise *simp = new SimplexNoise(rand() % 1000000);
+	simp->freq = 0.05f;
+	simp->octaves = 2;
+	simp->updateFractalBounds();
+	
+	int cave_nums[SCREEN_HEIGHT / BOX_HEIGHT];
+	
+	//SDL_Texture* block_texture = loadTexture("../res/block.png");
+	//SDL_Texture* background_texture = loadTexture("../res/background_block.png");
+	
+	//generate values from a "line" of noise, one value for each row of blocks
+	for (int test = -18; test < 18; test++)
+	{
+		float val_f = simp->getSingle(1, test) * 100;
+		
+		int val_i = (int)val_f;
+		
+		cave_nums[test + 18] = val_i;
+	}
+	
+	bool player_created = false;
+	Player *user;// = new Player(10, 0, 20, 20, loadTexture("../res/Guy.png"));
+	
+	//for each block on the screen
+	for (int y = 0; y < SCREEN_HEIGHT; y = y + BOX_HEIGHT)
+	{
+		
+		for (int x = 0; x < SCREEN_WIDTH; x = x + BOX_WIDTH)
+		{
+			//x position of block / screen width
+			int ratio = (float)x / (float)SCREEN_WIDTH * 100;
+			
+			
+			//if the relative position of the block on the screen is more than 10 below or above 
+			//the given noise value for this row, render it as part of the walls
+			if ((ratio < cave_nums[y / BOX_HEIGHT] - 10) || (ratio > cave_nums[y / BOX_HEIGHT] + 10))
+			{	
+				SDL_Rect block = {x, y, BOX_WIDTH, BOX_HEIGHT};
+				blocks.push_back(block);
+			}
+			//else, render it as part of the cave
+			else
+			{
+				//SDL_Rect block = {x, y, BOX_WIDTH, BOX_HEIGHT};
+				
+				//spawn the player in the first empty block
+				if (!player_created)
+				{
+					user = new Player(x, y, 20, 20, loadTexture("../res/Guy.png"));
+					player_created = true;
+				}
+				
+				//decorative_blocks.push_back(block);
+			}
+		}
+	}
+	
+	return user;
+	
 }
 
 void runCredits()
@@ -161,14 +236,17 @@ void runCredits()
 void runGame()
 {
 	// Create player object with x, y, w, h, texture
-	Player *user = new Player(10, 0, 20, 20, loadTexture("../res/Guy.png"));
+	//Player *user = new Player(10, 0, 20, 20, loadTexture("../res/Guy.png"));
+	
+	//create the player and generate the terrain
+	Player *user = generateTerrain();
 
 	//Define the blocks
-	SDL_Rect block = {SCREEN_WIDTH/2, SCREEN_HEIGHT-20, 200, 20};
+	/*SDL_Rect block = {SCREEN_WIDTH/2, SCREEN_HEIGHT-20, 200, 20};
 	SDL_Rect anotherBlock = {SCREEN_WIDTH/2 - 190, SCREEN_HEIGHT-120, 120, 20};
 	SDL_Rect spring = {SCREEN_WIDTH/2 - 300, SCREEN_HEIGHT-180, 100, 20};
 
-	std::vector <SDL_Rect> blocks = {block, anotherBlock, spring};
+	blocks = {block, anotherBlock, spring};*/
 
 	SDL_Event e;
 	bool gameon = true;
