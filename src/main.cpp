@@ -10,7 +10,7 @@
 #include "Player.h"
 
 #define CREDIT_SIZE 10
-#define MENU_SIZE 2
+#define MENU_SIZE 4
 
 constexpr int SCREEN_WIDTH = 1280;
 constexpr int SCREEN_HEIGHT = 720;
@@ -18,7 +18,6 @@ constexpr int SCREEN_HEIGHT = 720;
 //for move player tutorial, may move to player object later
 constexpr int BOX_WIDTH = 20;
 constexpr int BOX_HEIGHT = 20;
-constexpr int WORLD_DEPTH = 3000;
 
 // Globals
 Screen *screen = nullptr;
@@ -26,8 +25,8 @@ Uint32 before;
 Uint32 then;
 Uint32 delta;
 Uint32 now;
-std::vector <SDL_Rect> blocks;
-std::vector <SDL_Rect> decorative_blocks;
+std::vector <SDL_Rect> blocks;	//stores collidable blocks
+std::vector <SDL_Rect> decorative_blocks;	//stores non-collidable blocks
 
 // Function declarations
 bool init();
@@ -250,20 +249,19 @@ void runGame()
 	
 	//create the player and generate the terrain
 	Player *user = generateTerrain();
-	//mine
 
-	
 	//Define the blocks
 	/*SDL_Rect block = {SCREEN_WIDTH/2, SCREEN_HEIGHT-20, 200, 20};
 	SDL_Rect anotherBlock = {SCREEN_WIDTH/2 - 190, SCREEN_HEIGHT-120, 120, 20};
 	SDL_Rect spring = {SCREEN_WIDTH/2 - 300, SCREEN_HEIGHT-180, 100, 20};
+
 	blocks = {block, anotherBlock, spring};*/
 
 	SDL_Event e;
 	bool gameon = true;
 	while (gameon)
 	{
-		
+
 		user->applyForces();
 
 		//get intended motion based off input
@@ -314,7 +312,7 @@ void runGame()
 
 		//check constraints and resolve conflicts
 		//apply forces based off gravity and collisions
-		
+		user->detectCollisions(blocks);
 		
 		// Clear black
 		SDL_SetRenderDrawColor(screen->renderer, 0x00, 0x00, 0x00, 0xFF);
@@ -323,19 +321,24 @@ void runGame()
 		// Draw boxes
 		SDL_SetRenderDrawColor(screen->renderer, 0xFF, 0x00, 0x00, 0xFF);
 		
-		for (auto b: blocks)
+		for (auto bs: blocks)
 		{
-			b.y -= (user->y_pos-user->y_screenPos);
-			b.x -= (user->x_pos-user->x_screenPos);
-			SDL_RenderFillRect(screen->renderer, &b);
+			SDL_RenderFillRect(screen->renderer, &bs);
 		}
-		user->detectCollisions(blocks);
+
 
 		// Player box
-		SDL_Rect player_rect = {user->x_screenPos, user->y_screenPos, user->width, user->height};
+		SDL_Rect player_rect = {user->x_pos, user->y_pos, user->width, user->height};
 		SDL_RenderCopy(screen->renderer, user->player_texture, NULL, &player_rect);
 		SDL_RenderPresent(screen->renderer);
 	}
+}
+
+void runMultiTestClient()
+{
+	
+	
+	
 }
 
 void runMenu()
@@ -348,6 +351,8 @@ void runMenu()
 	Image *menu[MENU_SIZE] = {
 		loadImage("../res/play.png", 1280, 720),
 		loadImage("../res/creds.png", 1280, 720),
+		loadImage("../res/mult.png", 1280, 720),
+		loadImage("../res/bees.png", 1280, 720)
 	};
 
 	while (gameon)
@@ -368,19 +373,43 @@ void runMenu()
 			{
 				runGame();
 			}
-			if (keystate[SDL_SCANCODE_RETURN] && menuPos == 1)
+			else if (keystate[SDL_SCANCODE_RETURN] && menuPos == 1)
 			{
 				before = SDL_GetTicks();
 				runCredits();
 			}
-			if (keystate[SDL_SCANCODE_A] && menuPos == 1)
+			else if(keystate[SDL_SCANCODE_RETURN] && menuPos == 2)
+			{
+				runMultiTestClient();
+			}
+			else if(keystate[SDL_SCANCODE_RETURN] && menuPos == 3)
+			{
+				//put bees
+			}
+			else if (keystate[SDL_SCANCODE_A] && menuPos == 1)
 			{
 				//can go left
 				menuPos = 0;
 			}
-			if (keystate[SDL_SCANCODE_D] && menuPos == 0)
+			else if (keystate[SDL_SCANCODE_D] && menuPos == 0)
 			{
 				//can go right
+				menuPos = 1;
+			}
+			else if(keystate[SDL_SCANCODE_W] && menuPos == 2)
+			{
+				menuPos = 0;
+			}
+			else if(keystate[SDL_SCANCODE_W] && menuPos == 1)
+			{
+				menuPos = 3;
+			}
+			else if(keystate[SDL_SCANCODE_S] && (menuPos == 0 || menuPos == 1))
+			{
+				menuPos = 2;
+			}
+			else if(keystate[SDL_SCANCODE_S] && menuPos == 3)
+			{
 				menuPos = 1;
 			}
 
