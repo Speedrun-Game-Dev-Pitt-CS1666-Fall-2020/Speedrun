@@ -253,7 +253,7 @@ void runGame()
 	bool gameon = true;
 	while (gameon)
 	{
-
+		
 		user->applyForces();
 
 		//get intended motion based off input
@@ -315,14 +315,14 @@ void runGame()
 		
 		for (auto b: blocks)
 		{
-			b.y = b.y - (user->y_vel);
-			b.x = b.x - (user->x_vel);
+			b.y -= (user->y_pos-user->y_screenPos);
+			b.x -= (user->x_pos-user->x_screenPos);
 			SDL_RenderFillRect(screen->renderer, &b);
 		}
 		user->detectCollisions(blocks);
 
 		// Player box
-		SDL_Rect player_rect = {user->x_pos, user->y_pos, user->width, user->height};
+		SDL_Rect player_rect = {user->x_screenPos, user->y_screenPos, user->width, user->height};
 		SDL_RenderCopy(screen->renderer, user->player_texture, NULL, &player_rect);
 		SDL_RenderPresent(screen->renderer);
 	}
