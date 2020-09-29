@@ -10,7 +10,7 @@
 #include "Player.h"
 
 #define CREDIT_SIZE 10
-#define MENU_SIZE 2
+#define MENU_SIZE 4
 
 constexpr int SCREEN_WIDTH = 1280;
 constexpr int SCREEN_HEIGHT = 720;
@@ -334,6 +334,13 @@ void runGame()
 	}
 }
 
+void runMultiTestClient()
+{
+	
+	
+	
+}
+
 void runMenu()
 {
 	SDL_Event e;
@@ -344,6 +351,8 @@ void runMenu()
 	Image *menu[MENU_SIZE] = {
 		loadImage("../res/play.png", 1280, 720),
 		loadImage("../res/creds.png", 1280, 720),
+		loadImage("../res/mult.png", 1280, 720),
+		loadImage("../res/bees.png", 1280, 720)
 	};
 
 	while (gameon)
@@ -364,19 +373,43 @@ void runMenu()
 			{
 				runGame();
 			}
-			if (keystate[SDL_SCANCODE_RETURN] && menuPos == 1)
+			else if (keystate[SDL_SCANCODE_RETURN] && menuPos == 1)
 			{
 				before = SDL_GetTicks();
 				runCredits();
 			}
-			if (keystate[SDL_SCANCODE_A] && menuPos == 1)
+			else if(keystate[SDL_SCANCODE_RETURN] && menuPos == 2)
+			{
+				runMultiTestClient();
+			}
+			else if(keystate[SDL_SCANCODE_RETURN] && menuPos == 3)
+			{
+				//put bees
+			}
+			else if (keystate[SDL_SCANCODE_A] && menuPos == 1)
 			{
 				//can go left
 				menuPos = 0;
 			}
-			if (keystate[SDL_SCANCODE_D] && menuPos == 0)
+			else if (keystate[SDL_SCANCODE_D] && menuPos == 0)
 			{
 				//can go right
+				menuPos = 1;
+			}
+			else if(keystate[SDL_SCANCODE_W] && menuPos == 2)
+			{
+				menuPos = 0;
+			}
+			else if(keystate[SDL_SCANCODE_W] && menuPos == 1)
+			{
+				menuPos = 3;
+			}
+			else if(keystate[SDL_SCANCODE_S] && (menuPos == 0 || menuPos == 1))
+			{
+				menuPos = 2;
+			}
+			else if(keystate[SDL_SCANCODE_S] && menuPos == 3)
+			{
 				menuPos = 1;
 			}
 
