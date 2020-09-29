@@ -250,6 +250,7 @@ void runGame()
 	
 	//create the player and generate the terrain
 	Player *user = generateTerrain();
+	//mine
 
 	
 	//Define the blocks
@@ -313,7 +314,6 @@ void runGame()
 
 		//check constraints and resolve conflicts
 		//apply forces based off gravity and collisions
-		user->detectCollisions(blocks);
 		
 		
 		// Clear black
@@ -323,16 +323,16 @@ void runGame()
 		// Draw boxes
 		SDL_SetRenderDrawColor(screen->renderer, 0xFF, 0x00, 0x00, 0xFF);
 		
-		for (auto bs: blocks)
 		for (auto b: blocks)
 		{
 			b.y -= (user->y_pos-user->y_screenPos);
 			b.x -= (user->x_pos-user->x_screenPos);
 			SDL_RenderFillRect(screen->renderer, &b);
 		}
+		user->detectCollisions(blocks);
 
 		// Player box
-		SDL_Rect player_rect = {user->x_pos, user->y_pos, user->width, user->height};
+		SDL_Rect player_rect = {user->x_screenPos, user->y_screenPos, user->width, user->height};
 		SDL_RenderCopy(screen->renderer, user->player_texture, NULL, &player_rect);
 		SDL_RenderPresent(screen->renderer);
 	}
