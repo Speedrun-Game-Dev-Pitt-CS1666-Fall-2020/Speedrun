@@ -14,12 +14,11 @@ public:
 	Image(Screen* screen, const char* src, int x, int y, int w, int h) {
 		auto surface = IMG_Load(src);
 		if (!surface) {
-			std::cerr << "Failed to create surface. (From: " << src << ")\n";
+			std::cerr << "Failed to create surface.\n";
 		}
-		
 		this->texture = SDL_CreateTextureFromSurface(screen->renderer, surface);
 		if (!texture) {
-			std::cerr << "Failed to create texture. (From: " << src << ")" << std::endl;
+			std::cerr << "Failed to create texture.\n";
 		}
 
 		this->bounds = new SDL_Rect{ x, y, w, h };

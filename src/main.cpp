@@ -16,8 +16,8 @@ constexpr int SCREEN_WIDTH = 1280;
 constexpr int SCREEN_HEIGHT = 720;
 
 //for move player tutorial, may move to player object later
-constexpr int BOX_WIDTH = 20;
-constexpr int BOX_HEIGHT = 20;
+constexpr int BOX_SIZE = 20;
+constexpr int WORLD_DEPTH = 3000;
 
 // Globals
 Screen *screen = nullptr;
@@ -108,7 +108,7 @@ Player* generateTerrain()
 	simp->octaves = 2;
 	simp->updateFractalBounds();
 	
-	int cave_nums[SCREEN_HEIGHT / BOX_HEIGHT];
+	int cave_nums[SCREEN_HEIGHT / BOX_SIZE];
 	
 	//SDL_Texture* block_texture = loadTexture("../res/block.png");
 	//SDL_Texture* background_texture = loadTexture("../res/background_block.png");
@@ -127,7 +127,7 @@ Player* generateTerrain()
 	Player *user;// = new Player(10, 0, 20, 20, loadTexture("../res/Guy.png"));
 	
 	//for each block on the screen
-	for (int y = 0; y < SCREEN_HEIGHT; y = y + BOX_HEIGHT)
+	for (int y = 0; y < SCREEN_HEIGHT; y = y + BOX_SIZE)
 	{
 		bool b = true;
 		
@@ -137,15 +137,21 @@ Player* generateTerrain()
 		//"end" indicates the relative position of the right wall of the cave to the screen at a given elevation
 		int end = cave_nums[y / BOX_HEIGHT] + 10;
 		
-		//for each block at elevation y, compare the relative x position of the block on the screen to the
-		//"start" and "end" positions
-		for (int x = 0; x < SCREEN_WIDTH; x = x + BOX_WIDTH)
+		for (int x = 0; x < SCREEN_WIDTH; x = x + BOX_SIZE)
 		{
 			//relative x position of the block on the screen
 			int ratio = (float)x / (float)SCREEN_WIDTH * 100;
 			
-			//create the rectangle representing the left wall of the cave at elevation y when we reach the correct relative x position
-			if (ratio > start && b)
+			
+			//if the relative position of the block on the screen is more than 10 below or above 
+			//the given noise value for this row, render it as part of the walls
+			if ((ratio < cave_nums[y / BOX_SIZE] - 10) || (ratio > cave_nums[y / BOX_SIZE] + 10))
+			{	
+				SDL_Rect block = {x, y, BOX_SIZE, BOX_SIZE};
+				blocks.push_back(block);
+			}
+			//else, render it as part of the cave
+			else
 			{
 				SDL_Rect block = {0, y, BOX_WIDTH * (x / BOX_WIDTH), BOX_HEIGHT};
 				blocks.push_back(block);
@@ -249,19 +255,20 @@ void runGame()
 	
 	//create the player and generate the terrain
 	Player *user = generateTerrain();
+	//mine
 
+	
 	//Define the blocks
 	/*SDL_Rect block = {SCREEN_WIDTH/2, SCREEN_HEIGHT-20, 200, 20};
 	SDL_Rect anotherBlock = {SCREEN_WIDTH/2 - 190, SCREEN_HEIGHT-120, 120, 20};
 	SDL_Rect spring = {SCREEN_WIDTH/2 - 300, SCREEN_HEIGHT-180, 100, 20};
-
 	blocks = {block, anotherBlock, spring};*/
 
 	SDL_Event e;
 	bool gameon = true;
 	while (gameon)
 	{
-
+		
 		user->applyForces();
 
 		//get intended motion based off input
@@ -312,7 +319,7 @@ void runGame()
 
 		//check constraints and resolve conflicts
 		//apply forces based off gravity and collisions
-		user->detectCollisions(blocks);
+		
 		
 		// Clear black
 		SDL_SetRenderDrawColor(screen->renderer, 0x00, 0x00, 0x00, 0xFF);
@@ -321,14 +328,16 @@ void runGame()
 		// Draw boxes
 		SDL_SetRenderDrawColor(screen->renderer, 0xFF, 0x00, 0x00, 0xFF);
 		
-		for (auto bs: blocks)
+		for (auto b: blocks)
 		{
-			SDL_RenderFillRect(screen->renderer, &bs);
+			b.y -= (user->y_pos-user->y_screenPos);
+			b.x -= (user->x_pos-user->x_screenPos);
+			SDL_RenderFillRect(screen->renderer, &b);
 		}
-
+		user->detectCollisions(blocks);
 
 		// Player box
-		SDL_Rect player_rect = {user->x_pos, user->y_pos, user->width, user->height};
+		SDL_Rect player_rect = {user->x_screenPos, user->y_screenPos, user->width, user->height};
 		SDL_RenderCopy(screen->renderer, user->player_texture, NULL, &player_rect);
 		SDL_RenderPresent(screen->renderer);
 	}
