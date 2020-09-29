@@ -107,11 +107,7 @@ Player* generateTerrain()
 	simp->octaves = 2;
 	simp->updateFractalBounds();
 	
-<<<<<<< HEAD
 	int cave_nums[SCREEN_HEIGHT / BOX_SIZE];
-=======
-	int cave_nums[SCREEN_HEIGHT / BOX_HEIGHT];
->>>>>>> upstream/master
 	
 	//SDL_Texture* block_texture = loadTexture("../res/block.png");
 	//SDL_Texture* background_texture = loadTexture("../res/background_block.png");
@@ -130,17 +126,10 @@ Player* generateTerrain()
 	Player *user;// = new Player(10, 0, 20, 20, loadTexture("../res/Guy.png"));
 	
 	//for each block on the screen
-<<<<<<< HEAD
 	for (int y = 0; y < SCREEN_HEIGHT; y = y + BOX_SIZE)
 	{
 		
 		for (int x = 0; x < SCREEN_WIDTH; x = x + BOX_SIZE)
-=======
-	for (int y = 0; y < SCREEN_HEIGHT; y = y + BOX_HEIGHT)
-	{
-		
-		for (int x = 0; x < SCREEN_WIDTH; x = x + BOX_WIDTH)
->>>>>>> upstream/master
 		{
 			//x position of block / screen width
 			int ratio = (float)x / (float)SCREEN_WIDTH * 100;
@@ -148,15 +137,9 @@ Player* generateTerrain()
 			
 			//if the relative position of the block on the screen is more than 10 below or above 
 			//the given noise value for this row, render it as part of the walls
-<<<<<<< HEAD
 			if ((ratio < cave_nums[y / BOX_SIZE] - 10) || (ratio > cave_nums[y / BOX_SIZE] + 10))
 			{	
 				SDL_Rect block = {x, y, BOX_SIZE, BOX_SIZE};
-=======
-			if ((ratio < cave_nums[y / BOX_HEIGHT] - 10) || (ratio > cave_nums[y / BOX_HEIGHT] + 10))
-			{	
-				SDL_Rect block = {x, y, BOX_WIDTH, BOX_HEIGHT};
->>>>>>> upstream/master
 				blocks.push_back(block);
 			}
 			//else, render it as part of the cave
@@ -257,21 +240,13 @@ void runGame()
 	
 	//create the player and generate the terrain
 	Player *user = generateTerrain();
-<<<<<<< HEAD
 	//mine
 
 	
-=======
-
->>>>>>> upstream/master
 	//Define the blocks
 	/*SDL_Rect block = {SCREEN_WIDTH/2, SCREEN_HEIGHT-20, 200, 20};
 	SDL_Rect anotherBlock = {SCREEN_WIDTH/2 - 190, SCREEN_HEIGHT-120, 120, 20};
 	SDL_Rect spring = {SCREEN_WIDTH/2 - 300, SCREEN_HEIGHT-180, 100, 20};
-<<<<<<< HEAD
-=======
-
->>>>>>> upstream/master
 	blocks = {block, anotherBlock, spring};*/
 
 	SDL_Event e;
@@ -329,11 +304,7 @@ void runGame()
 
 		//check constraints and resolve conflicts
 		//apply forces based off gravity and collisions
-<<<<<<< HEAD
 		
-=======
-		user->detectCollisions(blocks);
->>>>>>> upstream/master
 		
 		// Clear black
 		SDL_SetRenderDrawColor(screen->renderer, 0x00, 0x00, 0x00, 0xFF);
@@ -342,7 +313,6 @@ void runGame()
 		// Draw boxes
 		SDL_SetRenderDrawColor(screen->renderer, 0xFF, 0x00, 0x00, 0xFF);
 		
-<<<<<<< HEAD
 		for (auto b: blocks)
 		{
 			b.y = b.y - (user->y_vel);
@@ -350,13 +320,6 @@ void runGame()
 			SDL_RenderFillRect(screen->renderer, &b);
 		}
 		user->detectCollisions(blocks);
-=======
-		for (auto bs: blocks)
-		{
-			SDL_RenderFillRect(screen->renderer, &bs);
-		}
-
->>>>>>> upstream/master
 
 		// Player box
 		SDL_Rect player_rect = {user->x_pos, user->y_pos, user->width, user->height};
