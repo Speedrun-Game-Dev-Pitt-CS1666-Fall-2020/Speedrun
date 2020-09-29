@@ -10,7 +10,7 @@
 #include "Player.h"
 
 #define CREDIT_SIZE 10
-#define MENU_SIZE 2
+#define MENU_SIZE 4
 
 constexpr int SCREEN_WIDTH = 1280;
 constexpr int SCREEN_HEIGHT = 720;
@@ -25,8 +25,8 @@ Uint32 before;
 Uint32 then;
 Uint32 delta;
 Uint32 now;
-std::vector <SDL_Rect> blocks;
-std::vector <SDL_Rect> decorative_blocks;
+std::vector <SDL_Rect> blocks;	//stores collidable blocks
+std::vector <SDL_Rect> decorative_blocks;	//stores non-collidable blocks
 
 // Function declarations
 bool init();
@@ -102,6 +102,7 @@ Player* generateTerrain()
 	int rand (void);
 	
 	XorShifter *rng = new XorShifter(412001000);
+	
 	SimplexNoise *simp = new SimplexNoise(rand() % 1000000);
 	simp->freq = 0.05f;
 	simp->octaves = 2;
@@ -128,10 +129,17 @@ Player* generateTerrain()
 	//for each block on the screen
 	for (int y = 0; y < SCREEN_HEIGHT; y = y + BOX_SIZE)
 	{
+		bool b = true;
+		
+		//"start" indicates the relative position of the left wall of the cave to the screen at a given elevation
+		int start = cave_nums[y / BOX_HEIGHT] - 11;
+		
+		//"end" indicates the relative position of the right wall of the cave to the screen at a given elevation
+		int end = cave_nums[y / BOX_HEIGHT] + 10;
 		
 		for (int x = 0; x < SCREEN_WIDTH; x = x + BOX_SIZE)
 		{
-			//x position of block / screen width
+			//relative x position of the block on the screen
 			int ratio = (float)x / (float)SCREEN_WIDTH * 100;
 			
 			
@@ -145,16 +153,23 @@ Player* generateTerrain()
 			//else, render it as part of the cave
 			else
 			{
-				//SDL_Rect block = {x, y, BOX_WIDTH, BOX_HEIGHT};
+				SDL_Rect block = {0, y, BOX_WIDTH * (x / BOX_WIDTH), BOX_HEIGHT};
+				blocks.push_back(block);
+				b = false;
 				
-				//spawn the player in the first empty block
+				//spawn the player in at the first available "free" block
 				if (!player_created)
 				{
 					user = new Player(x, y, 20, 20, loadTexture("../res/Guy.png"));
 					player_created = true;
 				}
-				
-				//decorative_blocks.push_back(block);
+			}
+			//create the rectangle representing the right wall of the cave at elevation y when we reacht he correct relative x position
+			if (ratio > end)
+			{
+				SDL_Rect block = {x, y, BOX_WIDTH *100, BOX_HEIGHT};
+				blocks.push_back(block);
+				break;
 			}
 		}
 	}
@@ -328,6 +343,13 @@ void runGame()
 	}
 }
 
+void runMultiTestClient()
+{
+	
+	
+	
+}
+
 void runMenu()
 {
 	SDL_Event e;
@@ -338,6 +360,8 @@ void runMenu()
 	Image *menu[MENU_SIZE] = {
 		loadImage("../res/play.png", 1280, 720),
 		loadImage("../res/creds.png", 1280, 720),
+		loadImage("../res/mult.png", 1280, 720),
+		loadImage("../res/bees.png", 1280, 720)
 	};
 
 	while (gameon)
@@ -358,19 +382,43 @@ void runMenu()
 			{
 				runGame();
 			}
-			if (keystate[SDL_SCANCODE_RETURN] && menuPos == 1)
+			else if (keystate[SDL_SCANCODE_RETURN] && menuPos == 1)
 			{
 				before = SDL_GetTicks();
 				runCredits();
 			}
-			if (keystate[SDL_SCANCODE_A] && menuPos == 1)
+			else if(keystate[SDL_SCANCODE_RETURN] && menuPos == 2)
+			{
+				runMultiTestClient();
+			}
+			else if(keystate[SDL_SCANCODE_RETURN] && menuPos == 3)
+			{
+				//put bees
+			}
+			else if (keystate[SDL_SCANCODE_A] && menuPos == 1)
 			{
 				//can go left
 				menuPos = 0;
 			}
-			if (keystate[SDL_SCANCODE_D] && menuPos == 0)
+			else if (keystate[SDL_SCANCODE_D] && menuPos == 0)
 			{
 				//can go right
+				menuPos = 1;
+			}
+			else if(keystate[SDL_SCANCODE_W] && menuPos == 2)
+			{
+				menuPos = 0;
+			}
+			else if(keystate[SDL_SCANCODE_W] && menuPos == 1)
+			{
+				menuPos = 3;
+			}
+			else if(keystate[SDL_SCANCODE_S] && (menuPos == 0 || menuPos == 1))
+			{
+				menuPos = 2;
+			}
+			else if(keystate[SDL_SCANCODE_S] && menuPos == 3)
+			{
 				menuPos = 1;
 			}
 
