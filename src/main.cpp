@@ -5,7 +5,7 @@
 #include <SDL.h>
 #include <SDL_image.h>
 
-// Networking stuffs
+/* Networking stuffs
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -13,7 +13,8 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <netdb.h> 
+#include <netdb.h>
+*/
 
 // Our headers
 #include "XorShifter.h"
@@ -21,6 +22,7 @@
 #include "Screen.h"
 #include "Image.h"
 #include "Player.h"
+#include "StateMachine.hpp"
 
 #define CREDIT_SIZE 10
 #define MENU_SIZE 4
@@ -366,7 +368,8 @@ void runMultiTestClient()
 	2. Connect the socket to the address of the server using the connect() system call
 	3. Send and receive data. There are a number of ways to do this, but the simplest is to use the read() and write() system calls.
 	*/
-
+	
+	/*
 	const char* hostName = "localhost";
 	const uint16_t portNum = 3060;
 	char buffer[256]; // bytes to communicate
@@ -420,13 +423,14 @@ void runMultiTestClient()
 		error("ERROR reading from socket");
 	}
 	printf("Read: %s\n",buffer);
-	*/
+	
 
 	// Start the game!
 	runGame();
 
 	// Player disconnected
 	close(clientSocket);
+	*/
 }
 
 void runMenu()
@@ -435,12 +439,15 @@ void runMenu()
 	bool gameon = true;
 	bool menuon = true;
 	int menuPos = 0;
-
+	
+	// The menu is a FSM!
+	MenuStateMachine m;
+	
 	Image *menu[MENU_SIZE] = {
 		loadImage("../res/play.png", 1280, 720),
 		loadImage("../res/creds.png", 1280, 720),
 		loadImage("../res/mult.png", 1280, 720),
-		loadImage("../res/bees.png", 1280, 720)
+		loadImage("../res/bees.png", 1280, 720) // I got rid of this functionality
 	};
 
 	while (gameon)
@@ -455,55 +462,48 @@ void runMenu()
 
 		if (menuon)
 		{
-
 			const Uint8 *keystate = SDL_GetKeyboardState(nullptr);
-			if (keystate[SDL_SCANCODE_RETURN] && menuPos == 0)
-			{
-				runGame();
+			
+			bool buttonPressed = false;
+			MenuInput buttonPress;
+			
+			if (keystate[SDL_SCANCODE_RETURN]) { 
+				switch (m.getState()) {
+					case Single:
+						runGame();
+						break;
+					case Credits:
+						before = SDL_GetTicks();
+						runCredits();
+						break;
+					case MultiL:
+					case MultiR:
+						runMultiTestClient();
+						break;
+				}
 			}
-			else if (keystate[SDL_SCANCODE_RETURN] && menuPos == 1)
-			{
-				before = SDL_GetTicks();
-				runCredits();
+			else if (keystate[SDL_SCANCODE_W] || keystate[SDL_SCANCODE_UP]) { buttonPress = Up; buttonPressed = true; }
+			else if (keystate[SDL_SCANCODE_A] || keystate[SDL_SCANCODE_LEFT]) { buttonPress = Left; buttonPressed = true; }
+			else if (keystate[SDL_SCANCODE_S] || keystate[SDL_SCANCODE_DOWN]) { buttonPress = Down; buttonPressed = true; }
+			else if (keystate[SDL_SCANCODE_D] || keystate[SDL_SCANCODE_RIGHT]) { buttonPress = Right; buttonPressed = true; }
+			
+			// default init the variable to the current state in case a button wasn't pressed
+			MenuState currentState = m.getState();
+			if (buttonPressed) {
+				// update it in accordance with the pressed button
+				currentState = m.processInput(buttonPress);
 			}
-			else if(keystate[SDL_SCANCODE_RETURN] && menuPos == 2)
-			{
-				runMultiTestClient();
+			
+			// now get the correct menu image
+			int imageIndex = (int)currentState;
+			// account for both multi states
+			if (imageIndex == 3) {
+				imageIndex = 2;
 			}
-			else if(keystate[SDL_SCANCODE_RETURN] && menuPos == 3)
-			{
-				//put bees
-			}
-			else if (keystate[SDL_SCANCODE_A] && menuPos == 1)
-			{
-				//can go left
-				menuPos = 0;
-			}
-			else if (keystate[SDL_SCANCODE_D] && menuPos == 0)
-			{
-				//can go right
-				menuPos = 1;
-			}
-			else if(keystate[SDL_SCANCODE_W] && menuPos == 2)
-			{
-				menuPos = 0;
-			}
-			else if(keystate[SDL_SCANCODE_W] && menuPos == 1)
-			{
-				menuPos = 3;
-			}
-			else if(keystate[SDL_SCANCODE_S] && (menuPos == 0 || menuPos == 1))
-			{
-				menuPos = 2;
-			}
-			else if(keystate[SDL_SCANCODE_S] && menuPos == 3)
-			{
-				menuPos = 1;
-			}
-
+			
 			SDL_SetRenderDrawColor(screen->renderer, 0x00, 0x00, 0x00, 0xFF);
 			SDL_RenderClear(screen->renderer);
-			Image *img = menu[menuPos];
+			Image *img = menu[imageIndex];
 			SDL_RenderCopy(screen->renderer, img->texture, img->bounds, screen->bounds);
 			SDL_RenderPresent(screen->renderer);
 		}
