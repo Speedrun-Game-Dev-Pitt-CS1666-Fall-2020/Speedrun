@@ -35,6 +35,7 @@ endif
 
 SpeedrunServer: $(SRCDIR)/SpeedrunServer.cpp
 ifndef OS
+	[ -d $(TARGET_DIR) ] || mkdir -p $(TARGET_DIR)
 	$(CC) $(SRCDIR)/SpeedrunServer.cpp -o $(TARGET)/SpeedrunServer
 endif 
 # TODO: move the multiplayer function to another file so it can compile without that stuff on Windows
