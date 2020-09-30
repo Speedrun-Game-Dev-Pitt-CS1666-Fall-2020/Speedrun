@@ -18,6 +18,7 @@ constexpr int SCREEN_HEIGHT = 720;
 //for move player tutorial, may move to player object later
 constexpr int BOX_WIDTH = 20;
 constexpr int BOX_HEIGHT = 20;
+constexpr int WORLD_DEPTH = 3000;
 
 // Globals
 Screen *screen = nullptr;
@@ -25,8 +26,8 @@ Uint32 before;
 Uint32 then;
 Uint32 delta;
 Uint32 now;
-std::vector <SDL_Rect> blocks;	//stores collidable blocks
-std::vector <SDL_Rect> decorative_blocks;	//stores non-collidable blocks
+std::vector <SDL_Rect> blocks;
+std::vector <SDL_Rect> decorative_blocks;
 
 // Function declarations
 bool init();
@@ -249,19 +250,20 @@ void runGame()
 	
 	//create the player and generate the terrain
 	Player *user = generateTerrain();
+	//mine
 
+	
 	//Define the blocks
 	/*SDL_Rect block = {SCREEN_WIDTH/2, SCREEN_HEIGHT-20, 200, 20};
 	SDL_Rect anotherBlock = {SCREEN_WIDTH/2 - 190, SCREEN_HEIGHT-120, 120, 20};
 	SDL_Rect spring = {SCREEN_WIDTH/2 - 300, SCREEN_HEIGHT-180, 100, 20};
-
 	blocks = {block, anotherBlock, spring};*/
 
 	SDL_Event e;
 	bool gameon = true;
 	while (gameon)
 	{
-
+		
 		user->applyForces();
 
 		//get intended motion based off input
@@ -312,7 +314,7 @@ void runGame()
 
 		//check constraints and resolve conflicts
 		//apply forces based off gravity and collisions
-		user->detectCollisions(blocks);
+		
 		
 		// Clear black
 		SDL_SetRenderDrawColor(screen->renderer, 0x00, 0x00, 0x00, 0xFF);
@@ -321,19 +323,20 @@ void runGame()
 		// Draw boxes
 		SDL_SetRenderDrawColor(screen->renderer, 0xFF, 0x00, 0x00, 0xFF);
 		
-		for (auto bs: blocks)
+		for (auto b: blocks)
 		{
-			SDL_RenderFillRect(screen->renderer, &bs);
+			b.y -= (user->y_pos-user->y_screenPos);
+			b.x -= (user->x_pos-user->x_screenPos);
+			SDL_RenderFillRect(screen->renderer, &b);
 		}
-
+		user->detectCollisions(blocks);
 
 		// Player box
-		SDL_Rect player_rect = {user->x_pos, user->y_pos, user->width, user->height};
+		SDL_Rect player_rect = {user->x_screenPos, user->y_screenPos, user->width, user->height};
 		SDL_RenderCopy(screen->renderer, user->player_texture, NULL, &player_rect);
 		SDL_RenderPresent(screen->renderer);
 	}
 }
-
 void runMultiTestClient()
 {
 	
