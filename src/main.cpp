@@ -349,12 +349,6 @@ void runGame()
 		SDL_RenderPresent(screen->renderer);
 	}
 }
-void runMultiTestClient()
-{
-	
-	
-	
-}
 
 void error(const char *msg)
 {
