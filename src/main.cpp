@@ -1,8 +1,21 @@
+// SDL2 stuffs
 #include <iostream>
 #include <vector>
 #include <time.h>
 #include <SDL.h>
 #include <SDL_image.h>
+
+// Networking stuffs
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netdb.h> 
+
+// Our headers
 #include "XorShifter.h"
 #include "SimplexNoise.h"
 #include "Screen.h"
@@ -26,8 +39,8 @@ Uint32 before;
 Uint32 then;
 Uint32 delta;
 Uint32 now;
-std::vector <SDL_Rect> blocks;
-std::vector <SDL_Rect> decorative_blocks;
+std::vector <SDL_Rect> blocks;	//stores collidable blocks
+std::vector <SDL_Rect> decorative_blocks;	//stores non-collidable blocks
 
 // Function declarations
 bool init();
@@ -250,7 +263,6 @@ void runGame()
 	
 	//create the player and generate the terrain
 	Player *user = generateTerrain();
-	//mine
 
 	
 	//Define the blocks
@@ -342,6 +354,85 @@ void runMultiTestClient()
 	
 	
 	
+}
+
+void error(const char *msg)
+{
+    perror(msg);
+    exit(1);
+}
+
+void runMultiTestClient()
+{
+	// Sockets Linux tutorial:
+	// http://www.linuxhowtos.org/C_C++/socket.htm
+
+	/*
+	1. Create a socket with the socket() system call
+	2. Connect the socket to the address of the server using the connect() system call
+	3. Send and receive data. There are a number of ways to do this, but the simplest is to use the read() and write() system calls.
+	*/
+
+	const char* hostName = "localhost";
+	const uint16_t portNum = 3060;
+	char buffer[256]; // bytes to communicate
+
+	// Create our socket
+	int clientSocket = socket(AF_INET, SOCK_STREAM, 0);
+	if (clientSocket < 0) {
+		error("Error creating socket...");
+	}
+
+	// Create our server object
+	struct sockaddr_in serverAddress;
+	bzero((char*) &serverAddress, sizeof(serverAddress));
+
+	// Get server info
+	struct hostent* server = gethostbyname(hostName);
+	if (server == NULL) {
+		error("Host doesn't exist...");
+	}
+
+	// Populate the server object
+	serverAddress.sin_family = AF_INET;
+	bcopy((char*) server->h_addr, (char*) &serverAddress.sin_addr.s_addr, server->h_length);
+
+	// Connect to the server
+	serverAddress.sin_port = htons(portNum);
+	if (connect(clientSocket,(struct sockaddr*) &serverAddress,sizeof(serverAddress)) < 0) {
+		error("Error connecting to server...");
+	}
+
+	// Client has successfully connected to server
+	// Create a message to send to it
+	bzero(buffer,256);
+	buffer[0] = 'P';
+	buffer[1] = 'i';
+	buffer[2] = 'n';
+	buffer[3] = 'g';
+	buffer[4] = '!';
+	buffer[5] = '\n';
+
+	// Write the data to the server
+	int n = write(clientSocket,buffer,strlen(buffer));
+	if (n < 0) {
+		error("Error writing to server...");
+	}
+
+	/* Read what the server has to say back (Nothing)
+	bzero(buffer,256);
+	n = read(clientSocket,buffer,255);
+	if (n < 0) {
+		error("ERROR reading from socket");
+	}
+	printf("Read: %s\n",buffer);
+	*/
+
+	// Start the game!
+	runGame();
+
+	// Player disconnected
+	close(clientSocket);
 }
 
 void runMenu()

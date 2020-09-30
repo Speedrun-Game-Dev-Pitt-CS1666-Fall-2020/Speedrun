@@ -3,9 +3,10 @@ CC = g++ # This is the main compiler
 SRCDIR = ./src
 BUILDDIR = ./build
 TARGET_DIR = bin
-TARGET = ./$(TARGET_DIR)/Speedrun
+TARGET = ./$(TARGET_DIR)
 
 SOURCES = $(wildcard $(SRCDIR)/*.cpp)
+SPEEDRUN_SOURCES = $(filter-out $(SRCDIR)/SpeedrunServer.cpp, $(SOURCES))
 #$(warning $(SOURCES))
 OBJECTS = $(addprefix $(BUILDDIR)/, $(notdir $(SOURCES:.cpp=.o)))
 #$(warning $(OBJECTS))
@@ -26,8 +27,11 @@ endif
 
 COMPILER_FLAGS = -w
 
-all : $(OBJS)
+all: SpeedrunServer
 ifndef OS
 	[ -d $(TARGET_DIR) ] || mkdir -p $(TARGET_DIR)
 endif
-	$(CC) $(SOURCES) $(INCLUDE_PATHS) $(LIBRARY_PATHS) $(COMPILER_FLAGS) $(LINKER_FLAGS) -o $(TARGET)
+	$(CC) $(SPEEDRUN_SOURCES) $(INCLUDE_PATHS) $(LIBRARY_PATHS) $(COMPILER_FLAGS) $(LINKER_FLAGS) -o $(TARGET)/Speedrun
+
+SpeedrunServer: $(SRCDIR)/SpeedrunServer.cpp
+	$(CC) $(SRCDIR)/SpeedrunServer.cpp -o $(TARGET)/SpeedrunServer
