@@ -1,5 +1,6 @@
 // SDL2 stuffs
 #include <iostream>
+#include <stdlib.h>
 #include <vector>
 #include <time.h>
 #include <SDL.h>
@@ -22,10 +23,10 @@
 #include "Screen.h"
 #include "Image.h"
 #include "Player.h"
-#include "StateMachine.hpp"
+#include "MenuStateMachine.hpp"
 
 #define CREDIT_SIZE 10
-#define MENU_SIZE 4
+#define MENU_SIZE 3
 
 constexpr int SCREEN_WIDTH = 1280;
 constexpr int SCREEN_HEIGHT = 720;
@@ -443,12 +444,17 @@ void runMenu()
 	// The menu is a FSM!
 	MenuStateMachine m;
 	
-	Image *menu[MENU_SIZE] = {
-		loadImage("../res/play.png", 1280, 720),
-		loadImage("../res/creds.png", 1280, 720),
-		loadImage("../res/mult.png", 1280, 720),
-		loadImage("../res/bees.png", 1280, 720) // I got rid of this functionality
-	};
+	// Load in our menu images
+	Image* logo = loadImage("../res/SpeedrunLogo.png", 642, 215);
+	Image* menuBG = loadImage("../res/FadedBackground.png", 1280, 720);
+	
+	Image* single = loadImage("../res/MenuSingle.png", 450, 80);
+	Image* credits = loadImage("../res/MenuCredits.png", 450, 80);
+	Image* multi = loadImage("../res/MenuMulti.png", 920, 80);	
+	
+	Image* singleSel = loadImage("../res/MenuSingleSelect.png", 450, 80);
+	Image* creditsSel = loadImage("../res/MenuCreditsSelect.png", 450, 80);
+	Image* multiSel = loadImage("../res/MenuMultiSelect.png", 920, 80);
 
 	while (gameon)
 	{
@@ -463,9 +469,13 @@ void runMenu()
 		if (menuon)
 		{
 			const Uint8 *keystate = SDL_GetKeyboardState(nullptr);
-			
 			bool buttonPressed = false;
 			MenuInput buttonPress;
+			
+			// initialize all buttons to unselected
+			Image* menuState[MENU_SIZE] = {
+				single, credits, multi
+			};
 			
 			if (keystate[SDL_SCANCODE_RETURN]) { 
 				switch (m.getState()) {
@@ -494,17 +504,33 @@ void runMenu()
 				currentState = m.processInput(buttonPress);
 			}
 			
-			// now get the correct menu image
-			int imageIndex = (int)currentState;
-			// account for both multi states
-			if (imageIndex == 3) {
-				imageIndex = 2;
+			// switch out unselected for selected on the correct button
+			switch (currentState) {
+				case Single:
+					menuState[0] = singleSel;
+					break;
+				case Credits:
+					menuState[1] = creditsSel;
+					break;
+				case MultiL:
+				case MultiR:
+					menuState[2] = multiSel;
+					break;
 			}
 			
-			SDL_SetRenderDrawColor(screen->renderer, 0x00, 0x00, 0x00, 0xFF);
-			SDL_RenderClear(screen->renderer);
-			Image *img = menu[imageIndex];
-			SDL_RenderCopy(screen->renderer, img->texture, img->bounds, screen->bounds);
+			// x position, y position, width, height
+			SDL_Rect SpeedrunLogo = {319, 96, 642, 215};
+			SDL_Rect SingleButton = {180, 390, 450, 80};
+			SDL_Rect CreditsButton = {650, 390, 450, 80};
+			SDL_Rect MultiButton = {180, 485, 920, 80};
+			
+			// Render the background first so it's in the back!
+			SDL_RenderCopy(screen->renderer, menuBG->texture, NULL, screen->bounds);
+			SDL_RenderCopy(screen->renderer, logo->texture, NULL, &SpeedrunLogo);
+			SDL_RenderCopy(screen->renderer, menuState[0]->texture, NULL, &SingleButton);
+			SDL_RenderCopy(screen->renderer, menuState[1]->texture, NULL, &CreditsButton);
+			SDL_RenderCopy(screen->renderer, menuState[2]->texture, NULL, &MultiButton);
+			
 			SDL_RenderPresent(screen->renderer);
 		}
 	}

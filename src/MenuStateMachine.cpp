@@ -1,7 +1,8 @@
-#include "StateMachine.hpp"
+#include "MenuStateMachine.hpp"
 
 // Initialize to the Singleplayer state
 MenuStateMachine::MenuStateMachine(): state(Single) {}
+MenuStateMachine::~MenuStateMachine() {}
 
 // State machine transitions!
 MenuState MenuStateMachine::processInput(MenuInput x) {

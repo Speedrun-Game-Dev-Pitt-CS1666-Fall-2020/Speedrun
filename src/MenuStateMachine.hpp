@@ -12,6 +12,7 @@ enum MenuInput {
 class MenuStateMachine {
 	public:
 		MenuStateMachine();
+		~MenuStateMachine();
 		MenuState processInput(MenuInput x);
 		MenuState getState();
 	private:
