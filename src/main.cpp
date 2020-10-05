@@ -13,7 +13,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <netdb.h> 
+#include <netdb.h>
 
 // Our headers
 #include "XorShifter.h"
@@ -39,8 +39,8 @@ Uint32 before;
 Uint32 then;
 Uint32 delta;
 Uint32 now;
-std::vector <SDL_Rect> blocks;	//stores collidable blocks
-std::vector <SDL_Rect> decorative_blocks;	//stores non-collidable blocks
+std::vector<SDL_Rect> blocks;			 //stores collidable blocks
+std::vector<SDL_Rect> decorative_blocks; //stores non-collidable blocks
 
 // Function declarations
 bool init();
@@ -49,7 +49,7 @@ Image *loadImage(const char *, int, int);
 void runCredits();
 void runGame();
 void runMenu();
-Player* generateTerrain();
+Player *generateTerrain();
 SDL_Texture *loadTexture(std::string);
 
 Image *loadImage(const char *src, int w, int h)
@@ -107,64 +107,64 @@ void close()
 }
 
 //create blocks, add them to the blocks vector, and return a player at a valid spawn point
-Player* generateTerrain()
+Player *generateTerrain()
 {
 	blocks.clear();
 	decorative_blocks.clear();
-	
-	srand (time(NULL));
-	int rand (void);
-	
+
+	srand(time(NULL));
+	int rand(void);
+
 	XorShifter *rng = new XorShifter(412001000);
-	
+
 	SimplexNoise *simp = new SimplexNoise(rand() % 1000000);
 	simp->freq = 0.05f;
 	simp->octaves = 2;
 	simp->updateFractalBounds();
-	
+
 	int cave_nums[SCREEN_HEIGHT / BOX_HEIGHT];
-	
+
 	//SDL_Texture* block_texture = loadTexture("../res/block.png");
 	//SDL_Texture* background_texture = loadTexture("../res/background_block.png");
-	
+
 	//generate values from a "line" of noise, one value for each row of blocks
 	for (int test = -18; test < 18; test++)
 	{
 		float val_f = simp->getSingle(1, test) * 100;
-		
+
 		int val_i = (int)val_f;
-		
+
 		cave_nums[test + 18] = val_i;
 	}
-	
+
 	bool player_created = false;
-	Player *user;// = new Player(10, 0, 20, 20, loadTexture("../res/Guy.png"));
-	
+	Player *user; // = new Player(10, 0, 20, 20, loadTexture("../res/Guy.png"));
+
 	//for each block on the screen
 	for (int y = 0; y < SCREEN_HEIGHT; y = y + BOX_HEIGHT)
 	{
 		bool b = true;
-		
+
 		//"start" indicates the relative position of the left wall of the cave to the screen at a given elevation
 		int start = cave_nums[y / BOX_HEIGHT] - 11;
-		
+
 		//"end" indicates the relative position of the right wall of the cave to the screen at a given elevation
 		int end = cave_nums[y / BOX_HEIGHT] + 10;
-		
+
 		//for each block at elevation y, compare the relative x position of the block on the screen to the
 		//"start" and "end" positions
 		for (int x = 0; x < SCREEN_WIDTH; x = x + BOX_WIDTH)
 		{
 			//relative x position of the block on the screen
 			int ratio = (float)x / (float)SCREEN_WIDTH * 100;
-			
+
 			//create the rectangle representing the left wall of the cave at elevation y when we reach the correct relative x position
 			if (ratio > start && b)
 			{
 				SDL_Rect block = {0, y, BOX_WIDTH * (x / BOX_WIDTH), BOX_HEIGHT};
 				blocks.push_back(block);
 				b = false;
-				
+
 				//spawn the player in at the first available "free" block
 				if (!player_created)
 				{
@@ -175,15 +175,14 @@ Player* generateTerrain()
 			//create the rectangle representing the right wall of the cave at elevation y when we reacht he correct relative x position
 			if (ratio > end)
 			{
-				SDL_Rect block = {x, y, BOX_WIDTH *100, BOX_HEIGHT};
+				SDL_Rect block = {x, y, BOX_WIDTH * 100, BOX_HEIGHT};
 				blocks.push_back(block);
 				break;
 			}
 		}
 	}
-	
+
 	return user;
-	
 }
 
 void runCredits()
@@ -260,22 +259,30 @@ void runGame()
 {
 	// Create player object with x, y, w, h, texture
 	//Player *user = new Player(10, 0, 20, 20, loadTexture("../res/Guy.png"));
-	
+
 	//create the player and generate the terrain
 	Player *user = generateTerrain();
 
-	
 	//Define the blocks
 	/*SDL_Rect block = {SCREEN_WIDTH/2, SCREEN_HEIGHT-20, 200, 20};
 	SDL_Rect anotherBlock = {SCREEN_WIDTH/2 - 190, SCREEN_HEIGHT-120, 120, 20};
 	SDL_Rect spring = {SCREEN_WIDTH/2 - 300, SCREEN_HEIGHT-180, 100, 20};
 	blocks = {block, anotherBlock, spring};*/
 
+	then = 0;
+
 	SDL_Event e;
 	bool gameon = true;
 	while (gameon)
 	{
-		
+
+		now = SDL_GetTicks();
+
+		if (then - now < 16)
+			continue;
+
+		then = now;
+
 		user->applyForces();
 
 		//get intended motion based off input
@@ -289,29 +296,31 @@ void runGame()
 			else
 			{
 
-				if(keystate[SDL_SCANCODE_W]){
+				if (keystate[SDL_SCANCODE_W])
+				{
 
 					if (!user->cantJump)
 					{
 						user->y_vel += -15;
 						user->cantJump = true;
 					}
-
 				}
-				if(keystate[SDL_SCANCODE_A]){
+				if (keystate[SDL_SCANCODE_A])
+				{
 					user->x_accel = -0.5;
 					// if(user->x_vel > -4){
 					// 	user->x_vel += -2;
 					// }
 				}
-				if(keystate[SDL_SCANCODE_D]){
+				if (keystate[SDL_SCANCODE_D])
+				{
 					user->x_accel = 0.5;
 					// if(user->x_vel < 4){
 					// 	user->x_vel += 2;
 					// }
 				}
-				if(keystate[SDL_SCANCODE_S]){
-					
+				if (keystate[SDL_SCANCODE_S])
+				{
 				}
 
 				if (!keystate[SDL_SCANCODE_A] && !keystate[SDL_SCANCODE_D])
@@ -326,19 +335,18 @@ void runGame()
 
 		//check constraints and resolve conflicts
 		//apply forces based off gravity and collisions
-		
-		
+
 		// Clear black
 		SDL_SetRenderDrawColor(screen->renderer, 0x00, 0x00, 0x00, 0xFF);
 		SDL_RenderClear(screen->renderer);
 
 		// Draw boxes
 		SDL_SetRenderDrawColor(screen->renderer, 0xFF, 0x00, 0x00, 0xFF);
-		
-		for (auto b: blocks)
+
+		for (auto b : blocks)
 		{
-			b.y -= (user->y_pos-user->y_screenPos);
-			b.x -= (user->x_pos-user->x_screenPos);
+			b.y -= (user->y_pos - user->y_screenPos);
+			b.x -= (user->x_pos - user->x_screenPos);
 			SDL_RenderFillRect(screen->renderer, &b);
 		}
 		user->detectCollisions(blocks);
@@ -352,8 +360,8 @@ void runGame()
 
 void error(const char *msg)
 {
-    perror(msg);
-    exit(1);
+	perror(msg);
+	exit(1);
 }
 
 void runMultiTestClient()
@@ -367,39 +375,42 @@ void runMultiTestClient()
 	3. Send and receive data. There are a number of ways to do this, but the simplest is to use the read() and write() system calls.
 	*/
 
-	const char* hostName = "localhost";
+	const char *hostName = "localhost";
 	const uint16_t portNum = 3060;
 	char buffer[256]; // bytes to communicate
 
 	// Create our socket
 	int clientSocket = socket(AF_INET, SOCK_STREAM, 0);
-	if (clientSocket < 0) {
+	if (clientSocket < 0)
+	{
 		error("Error creating socket...");
 	}
 
 	// Create our server object
 	struct sockaddr_in serverAddress;
-	bzero((char*) &serverAddress, sizeof(serverAddress));
+	bzero((char *)&serverAddress, sizeof(serverAddress));
 
 	// Get server info
-	struct hostent* server = gethostbyname(hostName);
-	if (server == NULL) {
+	struct hostent *server = gethostbyname(hostName);
+	if (server == NULL)
+	{
 		error("Host doesn't exist...");
 	}
 
 	// Populate the server object
 	serverAddress.sin_family = AF_INET;
-	bcopy((char*) server->h_addr, (char*) &serverAddress.sin_addr.s_addr, server->h_length);
+	bcopy((char *)server->h_addr, (char *)&serverAddress.sin_addr.s_addr, server->h_length);
 
 	// Connect to the server
 	serverAddress.sin_port = htons(portNum);
-	if (connect(clientSocket,(struct sockaddr*) &serverAddress,sizeof(serverAddress)) < 0) {
+	if (connect(clientSocket, (struct sockaddr *)&serverAddress, sizeof(serverAddress)) < 0)
+	{
 		error("Error connecting to server...");
 	}
 
 	// Client has successfully connected to server
 	// Create a message to send to it
-	bzero(buffer,256);
+	bzero(buffer, 256);
 	buffer[0] = 'P';
 	buffer[1] = 'i';
 	buffer[2] = 'n';
@@ -408,8 +419,9 @@ void runMultiTestClient()
 	buffer[5] = '\n';
 
 	// Write the data to the server
-	int n = write(clientSocket,buffer,strlen(buffer));
-	if (n < 0) {
+	int n = write(clientSocket, buffer, strlen(buffer));
+	if (n < 0)
+	{
 		error("Error writing to server...");
 	}
 
@@ -440,8 +452,7 @@ void runMenu()
 		loadImage("../res/play.png", 1280, 720),
 		loadImage("../res/creds.png", 1280, 720),
 		loadImage("../res/mult.png", 1280, 720),
-		loadImage("../res/bees.png", 1280, 720)
-	};
+		loadImage("../res/bees.png", 1280, 720)};
 
 	while (gameon)
 	{
@@ -466,11 +477,11 @@ void runMenu()
 				before = SDL_GetTicks();
 				runCredits();
 			}
-			else if(keystate[SDL_SCANCODE_RETURN] && menuPos == 2)
+			else if (keystate[SDL_SCANCODE_RETURN] && menuPos == 2)
 			{
 				runMultiTestClient();
 			}
-			else if(keystate[SDL_SCANCODE_RETURN] && menuPos == 3)
+			else if (keystate[SDL_SCANCODE_RETURN] && menuPos == 3)
 			{
 				//put bees
 			}
@@ -484,19 +495,19 @@ void runMenu()
 				//can go right
 				menuPos = 1;
 			}
-			else if(keystate[SDL_SCANCODE_W] && menuPos == 2)
+			else if (keystate[SDL_SCANCODE_W] && menuPos == 2)
 			{
 				menuPos = 0;
 			}
-			else if(keystate[SDL_SCANCODE_W] && menuPos == 1)
+			else if (keystate[SDL_SCANCODE_W] && menuPos == 1)
 			{
 				menuPos = 3;
 			}
-			else if(keystate[SDL_SCANCODE_S] && (menuPos == 0 || menuPos == 1))
+			else if (keystate[SDL_SCANCODE_S] && (menuPos == 0 || menuPos == 1))
 			{
 				menuPos = 2;
 			}
-			else if(keystate[SDL_SCANCODE_S] && menuPos == 3)
+			else if (keystate[SDL_SCANCODE_S] && menuPos == 3)
 			{
 				menuPos = 1;
 			}
