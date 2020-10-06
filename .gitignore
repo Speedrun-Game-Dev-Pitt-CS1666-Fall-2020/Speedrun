@@ -1,6 +1,0 @@
-*.exe
-.vscode
-
-bin
-include
-lib
