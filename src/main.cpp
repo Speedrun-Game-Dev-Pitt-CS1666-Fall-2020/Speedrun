@@ -359,13 +359,13 @@ void runGame()
 
 				}
 				if(keystate[SDL_SCANCODE_A]){
-					user->x_accel = -0.5;
+					user->x_accel = -1;
 					// if(user->x_vel > -4){
 					// 	user->x_vel += -2;
 					// }
 				}
 				if(keystate[SDL_SCANCODE_D]){
-					user->x_accel = 0.5;
+					user->x_accel = 1;
 					// if(user->x_vel < 4){
 					// 	user->x_vel += 2;
 					// }
@@ -401,6 +401,8 @@ void runGame()
 			b.x -= (user->x_pos-user->x_screenPos);
 			SDL_RenderFillRect(screen->renderer, &b);
 		}
+
+		user->detectCollisions(blocks);
 
 		// Player box
 		SDL_Rect player_rect = {user->x_screenPos, user->y_screenPos, user->width, user->height};

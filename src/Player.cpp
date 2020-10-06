@@ -118,23 +118,29 @@ bool Player::isColliding(SDL_Rect *r)
 //spring traps + friction and stuff change accel variables
 void Player::handleCollision(SDL_Rect *r)
 {
+
     //Check player velocity direction for
 
     //get the x and y constraints for box based off of velocity direction
     float requiredX = 0;
     float requiredY = 0;
 
+    float complementaryX = 0;
+    float complementaryY = 0;
+
     if (x_vel < 0)
     {
         //hitting collision object from right
         //need x pos of player to be box + boxwidth
-        requiredX = r->xs + r->w;
+        requiredX = r->x + r->w;
     }
-    else
+    else if(x_vel > 0)
     {
         //hitting collision object from left
         //need x pos of player to be box - playerwidth
         requiredX = r->x - width;
+    }else{
+        requiredX = 0;
     }
 
     if (y_vel < 0)
@@ -143,15 +149,61 @@ void Player::handleCollision(SDL_Rect *r)
         //need y pos of player to be box+boxheight
         requiredY = r->y + r->h;
     }
-    else
+    else if(y_vel > 0)
     {
         //hitting collision object from top
         //need y pos of player to be box - playerheight
         requiredY = r->y - height;
-        //moved on top of object
-        cantJump = false;
+    }else{
+        requiredY = 0;
     }
 
+    //y2 = y1 + slope (x2 - x1)
+    complementaryY = y_pos + (-y_vel / x_vel) * (requiredX - x_pos);
+    complementaryX = x_pos + (x_vel / y_vel) * (requiredY - y_pos);
+
+    if(x_vel == 0){
+        x_pos = complementaryX;
+        y_pos = requiredY;
+        //if falling, cant jump is false
+        if(y_vel > 0){
+            cantJump = false;
+        }
+
+        y_vel = 0;
+    
+        
+    }else if(y_vel == 0){
+        y_pos = complementaryY;
+        x_pos = requiredX;
+
+        x_vel = 0;
+    }else {
+
+        //which point is closer to current position?
+        //dist formula
+        if(powf((y_pos - complementaryY), 2) + powf((x_pos - requiredX), 2) < powf((x_pos - complementaryX), 2) + powf((y_pos - requiredY), 2)){
+            //required X closer
+            y_pos = complementaryY;
+            x_pos = requiredX;
+
+            x_vel = 0;
+
+        }else{
+            x_pos = complementaryX;
+            y_pos = requiredY;
+
+            //if falling, cant jump is false
+            if(y_vel > 0)
+                cantJump = false;
+            
+
+            y_vel = 0;
+        }
+
+    }
+
+/*
     //what is closer? complementary X to x_pos or complementary y to y_pos?
     if (fabs(y_pos - requiredY) < fabs(x_pos - requiredX))
     {
@@ -173,6 +225,7 @@ void Player::handleCollision(SDL_Rect *r)
         x_vel = 0;
         x_accel = 0;
     }
+*/
 
     //if moving towards collisions in either x or y, set velocity in that direction to 0
 }
