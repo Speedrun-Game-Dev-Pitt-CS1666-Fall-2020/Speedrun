@@ -360,8 +360,8 @@ void runGame(bool multiplayer)
 				
 			}
 			
-			
 			int n = write(clientSocket, buffer, strlen(buffer));
+
 			
 			if (n < 0) 
 			{

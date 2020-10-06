@@ -39,15 +39,18 @@ int main(int argc, char *argv[]) {
 		error("Error while binding...");
 	}
 
+	// Listen for connections to the server socket, up to 5 on waiting list
+	listen(serverSocket, 5);
+	socklen_t clientLength = sizeof(clientAddress);
+	
+	// accept blocks until a client connects
+	clientSocket = accept(serverSocket, (struct sockaddr*) &clientAddress, &clientLength);
+	if (clientSocket < 0) {
+		error("Error accepting client...");
+	}
+
 	while (true) {
-		// Listen for connections to the server socket, up to 5 on waiting list
-		listen(serverSocket, 5);
-		socklen_t clientLength = sizeof(clientAddress);
-		// accept blocks until a client connects
-		clientSocket = accept(serverSocket, (struct sockaddr*) &clientAddress, &clientLength);
-		if (clientSocket < 0) {
-			error("Error accepting client...");
-		}
+		
 
 		// Read the message from the client
 		bzero(buffer, 256);
