@@ -410,7 +410,7 @@ void runGame(bool multiplayer)
 				for(int i = 0; i < 17; i++)
 				{
 					
-					if(i == '|')
+					if(buffer[i] == '|')
 					{
 						currentMark = i;
 					}
