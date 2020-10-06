@@ -36,7 +36,7 @@ constexpr int WORLD_HEIGHT = 720 * 10;
 //for move player tutorial, may move to player object later
 constexpr int BOX_WIDTH = 20;
 constexpr int BOX_HEIGHT = 20;
-constexpr int WORLD_DEPTH = 3000;
+constexpr int WORLD_DEPTH = 7200;
 
 // Globals
 Screen *screen = nullptr;
@@ -294,7 +294,7 @@ void runCredits()
 					SDL_RenderFillRect(screen->renderer, &pixel);
 				}
 			}
-			int index = (now - before) / 3000;
+			int index = (now - before) / 7200;
 			if (index >= CREDIT_SIZE)
 				break;
 			//std::cout << index << std::endl;
@@ -376,9 +376,16 @@ void runGame()
 		// Move box
 		user->updatePosition();
 
+		//if user position on screen < 720/3
+			//then change user position and user position on screen, not blocks.
+		//if user position on screen is > 1440/3
+			//then change user position and user position on screeen, not blocks.
+		//else
+			//change block locations
 		//check constraints and resolve conflicts
 		//apply forces based off gravity and collisions
 		
+		//X, always change X of player and player screen pos, never block
 		
 		// Clear black
 		SDL_SetRenderDrawColor(screen->renderer, 0x00, 0x00, 0x00, 0xFF);
@@ -387,17 +394,26 @@ void runGame()
 		// Draw boxes
 		SDL_SetRenderDrawColor(screen->renderer, 0xFF, 0x00, 0x00, 0xFF);
 		
-		for (auto b: blocks)
+		if(user->y_screenPos < 720/3 || user->y_screenPos > 1440/3)
 		{
-			b.y -= (user->y_pos-user->y_screenPos);
-			b.x -= (user->x_pos-user->x_screenPos);
-			SDL_RenderFillRect(screen->renderer, &b);
+			user->y_screenPos += user->y_vel;//problem on start
+			for (auto b: blocks)
+			{
+				SDL_RenderFillRect(screen->renderer, &b);
+			}
 		}
-		
+		else
+		{
+			for (auto b: blocks)
+			{
+				b.y -= (user->y_pos-user->y_screenPos);
+				SDL_RenderFillRect(screen->renderer, &b);
+			}
+		}	
 		user->detectCollisions(blocks);
 
 		// Player box
-		SDL_Rect player_rect = {user->x_screenPos, user->y_screenPos, user->width, user->height};
+		SDL_Rect player_rect = {user->x_pos, user->y_screenPos, user->width, user->height};
 		SDL_RenderCopy(screen->renderer, user->player_texture, NULL, &player_rect);
 		SDL_RenderPresent(screen->renderer);
 	}
