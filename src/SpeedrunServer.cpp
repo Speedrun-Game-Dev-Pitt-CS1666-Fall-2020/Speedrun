@@ -58,7 +58,7 @@ int main(int argc, char *argv[]) {
 
 		printf("Received message from %d: %s\n", serverAddress.sin_addr.s_addr, buffer);
 
-		n = write(clientSocket, "I got your message", 18);
+		n = write(clientSocket, buffer, strlen(buffer));
 		if (n < 0) {
 			error("Error writing to client...");
 		}
