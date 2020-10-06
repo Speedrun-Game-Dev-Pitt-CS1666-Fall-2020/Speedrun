@@ -620,6 +620,7 @@ void runMenu()
 						break;
 					case MultiR:
 						setupMultiplayer();
+						close(clientSocket);
 						break;
 				}
 			}
