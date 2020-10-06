@@ -1,16 +1,32 @@
+// SDL2 stuffs
 #include <iostream>
+#include <stdlib.h>
 #include <vector>
 #include <time.h>
 #include <SDL.h>
 #include <SDL_image.h>
+
+/* Networking stuffs
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netdb.h>
+*/
+
+// Our headers
 #include "XorShifter.h"
 #include "SimplexNoise.h"
 #include "Screen.h"
 #include "Image.h"
 #include "Player.h"
+#include "MenuStateMachine.hpp"
 
 #define CREDIT_SIZE 10
-#define MENU_SIZE 2
+#define MENU_SIZE 3
 
 constexpr int SCREEN_WIDTH = 1280;
 constexpr int SCREEN_HEIGHT = 720;
@@ -18,6 +34,7 @@ constexpr int SCREEN_HEIGHT = 720;
 //for move player tutorial, may move to player object later
 constexpr int BOX_WIDTH = 20;
 constexpr int BOX_HEIGHT = 20;
+constexpr int WORLD_DEPTH = 3000;
 
 // Globals
 Screen *screen = nullptr;
@@ -250,18 +267,18 @@ void runGame()
 	//create the player and generate the terrain
 	Player *user = generateTerrain();
 
+	
 	//Define the blocks
 	/*SDL_Rect block = {SCREEN_WIDTH/2, SCREEN_HEIGHT-20, 200, 20};
 	SDL_Rect anotherBlock = {SCREEN_WIDTH/2 - 190, SCREEN_HEIGHT-120, 120, 20};
 	SDL_Rect spring = {SCREEN_WIDTH/2 - 300, SCREEN_HEIGHT-180, 100, 20};
-
 	blocks = {block, anotherBlock, spring};*/
 
 	SDL_Event e;
 	bool gameon = true;
 	while (gameon)
 	{
-
+		
 		user->applyForces();
 
 		//get intended motion based off input
@@ -312,7 +329,7 @@ void runGame()
 
 		//check constraints and resolve conflicts
 		//apply forces based off gravity and collisions
-		user->detectCollisions(blocks);
+		
 		
 		// Clear black
 		SDL_SetRenderDrawColor(screen->renderer, 0x00, 0x00, 0x00, 0xFF);
@@ -321,17 +338,100 @@ void runGame()
 		// Draw boxes
 		SDL_SetRenderDrawColor(screen->renderer, 0xFF, 0x00, 0x00, 0xFF);
 		
-		for (auto bs: blocks)
+		for (auto b: blocks)
 		{
-			SDL_RenderFillRect(screen->renderer, &bs);
+			b.y -= (user->y_pos-user->y_screenPos);
+			b.x -= (user->x_pos-user->x_screenPos);
+			SDL_RenderFillRect(screen->renderer, &b);
 		}
-
+		user->detectCollisions(blocks);
 
 		// Player box
-		SDL_Rect player_rect = {user->x_pos, user->y_pos, user->width, user->height};
+		SDL_Rect player_rect = {user->x_screenPos, user->y_screenPos, user->width, user->height};
 		SDL_RenderCopy(screen->renderer, user->player_texture, NULL, &player_rect);
 		SDL_RenderPresent(screen->renderer);
 	}
+}
+
+void error(const char *msg)
+{
+    perror(msg);
+    exit(1);
+}
+
+void runMultiTestClient()
+{
+	// Sockets Linux tutorial:
+	// http://www.linuxhowtos.org/C_C++/socket.htm
+
+	/*
+	1. Create a socket with the socket() system call
+	2. Connect the socket to the address of the server using the connect() system call
+	3. Send and receive data. There are a number of ways to do this, but the simplest is to use the read() and write() system calls.
+	*/
+	
+	/*
+	const char* hostName = "localhost";
+	const uint16_t portNum = 3060;
+	char buffer[256]; // bytes to communicate
+
+	// Create our socket
+	int clientSocket = socket(AF_INET, SOCK_STREAM, 0);
+	if (clientSocket < 0) {
+		error("Error creating socket...");
+	}
+
+	// Create our server object
+	struct sockaddr_in serverAddress;
+	bzero((char*) &serverAddress, sizeof(serverAddress));
+
+	// Get server info
+	struct hostent* server = gethostbyname(hostName);
+	if (server == NULL) {
+		error("Host doesn't exist...");
+	}
+
+	// Populate the server object
+	serverAddress.sin_family = AF_INET;
+	bcopy((char*) server->h_addr, (char*) &serverAddress.sin_addr.s_addr, server->h_length);
+
+	// Connect to the server
+	serverAddress.sin_port = htons(portNum);
+	if (connect(clientSocket,(struct sockaddr*) &serverAddress,sizeof(serverAddress)) < 0) {
+		error("Error connecting to server...");
+	}
+
+	// Client has successfully connected to server
+	// Create a message to send to it
+	bzero(buffer,256);
+	buffer[0] = 'P';
+	buffer[1] = 'i';
+	buffer[2] = 'n';
+	buffer[3] = 'g';
+	buffer[4] = '!';
+	buffer[5] = '\n';
+
+	// Write the data to the server
+	int n = write(clientSocket,buffer,strlen(buffer));
+	if (n < 0) {
+		error("Error writing to server...");
+	}
+
+	/* Read what the server has to say back (Nothing)
+	bzero(buffer,256);
+	n = read(clientSocket,buffer,255);
+	if (n < 0) {
+		error("ERROR reading from socket");
+	}
+	printf("Read: %s\n",buffer);
+	
+
+	// Start the game!
+	runGame();
+
+	// Player disconnected
+	close(clientSocket);
+	*/
 }
 
 void runMenu()
@@ -340,11 +440,21 @@ void runMenu()
 	bool gameon = true;
 	bool menuon = true;
 	int menuPos = 0;
-
-	Image *menu[MENU_SIZE] = {
-		loadImage("../res/play.png", 1280, 720),
-		loadImage("../res/creds.png", 1280, 720),
-	};
+	
+	// The menu is a FSM!
+	MenuStateMachine m;
+	
+	// Load in our menu images
+	Image* logo = loadImage("../res/SpeedrunLogo.png", 642, 215);
+	Image* menuBG = loadImage("../res/FadedBackground.png", 1280, 720);
+	
+	Image* single = loadImage("../res/MenuSingle.png", 450, 80);
+	Image* credits = loadImage("../res/MenuCredits.png", 450, 80);
+	Image* multi = loadImage("../res/MenuMulti.png", 920, 80);	
+	
+	Image* singleSel = loadImage("../res/MenuSingleSelect.png", 450, 80);
+	Image* creditsSel = loadImage("../res/MenuCreditsSelect.png", 450, 80);
+	Image* multiSel = loadImage("../res/MenuMultiSelect.png", 920, 80);
 
 	while (gameon)
 	{
@@ -358,32 +468,69 @@ void runMenu()
 
 		if (menuon)
 		{
-
 			const Uint8 *keystate = SDL_GetKeyboardState(nullptr);
-			if (keystate[SDL_SCANCODE_RETURN] && menuPos == 0)
-			{
-				runGame();
+			bool buttonPressed = false;
+			MenuInput buttonPress;
+			
+			// initialize all buttons to unselected
+			Image* menuState[MENU_SIZE] = {
+				single, credits, multi
+			};
+			
+			if (keystate[SDL_SCANCODE_RETURN]) { 
+				switch (m.getState()) {
+					case Single:
+						runGame();
+						break;
+					case Credits:
+						before = SDL_GetTicks();
+						runCredits();
+						break;
+					case MultiL:
+					case MultiR:
+						runMultiTestClient();
+						break;
+				}
 			}
-			if (keystate[SDL_SCANCODE_RETURN] && menuPos == 1)
-			{
-				before = SDL_GetTicks();
-				runCredits();
+			else if (keystate[SDL_SCANCODE_W] || keystate[SDL_SCANCODE_UP]) { buttonPress = Up; buttonPressed = true; }
+			else if (keystate[SDL_SCANCODE_A] || keystate[SDL_SCANCODE_LEFT]) { buttonPress = Left; buttonPressed = true; }
+			else if (keystate[SDL_SCANCODE_S] || keystate[SDL_SCANCODE_DOWN]) { buttonPress = Down; buttonPressed = true; }
+			else if (keystate[SDL_SCANCODE_D] || keystate[SDL_SCANCODE_RIGHT]) { buttonPress = Right; buttonPressed = true; }
+			
+			// default init the variable to the current state in case a button wasn't pressed
+			MenuState currentState = m.getState();
+			if (buttonPressed) {
+				// update it in accordance with the pressed button
+				currentState = m.processInput(buttonPress);
 			}
-			if (keystate[SDL_SCANCODE_A] && menuPos == 1)
-			{
-				//can go left
-				menuPos = 0;
+			
+			// switch out unselected for selected on the correct button
+			switch (currentState) {
+				case Single:
+					menuState[0] = singleSel;
+					break;
+				case Credits:
+					menuState[1] = creditsSel;
+					break;
+				case MultiL:
+				case MultiR:
+					menuState[2] = multiSel;
+					break;
 			}
-			if (keystate[SDL_SCANCODE_D] && menuPos == 0)
-			{
-				//can go right
-				menuPos = 1;
-			}
-
-			SDL_SetRenderDrawColor(screen->renderer, 0x00, 0x00, 0x00, 0xFF);
-			SDL_RenderClear(screen->renderer);
-			Image *img = menu[menuPos];
-			SDL_RenderCopy(screen->renderer, img->texture, img->bounds, screen->bounds);
+			
+			// x position, y position, width, height
+			SDL_Rect SpeedrunLogo = {319, 96, 642, 215};
+			SDL_Rect SingleButton = {180, 390, 450, 80};
+			SDL_Rect CreditsButton = {650, 390, 450, 80};
+			SDL_Rect MultiButton = {180, 485, 920, 80};
+			
+			// Render the background first so it's in the back!
+			SDL_RenderCopy(screen->renderer, menuBG->texture, NULL, screen->bounds);
+			SDL_RenderCopy(screen->renderer, logo->texture, NULL, &SpeedrunLogo);
+			SDL_RenderCopy(screen->renderer, menuState[0]->texture, NULL, &SingleButton);
+			SDL_RenderCopy(screen->renderer, menuState[1]->texture, NULL, &CreditsButton);
+			SDL_RenderCopy(screen->renderer, menuState[2]->texture, NULL, &MultiButton);
+			
 			SDL_RenderPresent(screen->renderer);
 		}
 	}

@@ -14,7 +14,8 @@ public:
 	Image(Screen* screen, const char* src, int x, int y, int w, int h) {
 		auto surface = IMG_Load(src);
 		if (!surface) {
-			std::cerr << "Failed to create surface. (From: " << src << ")\n";
+			std::cerr << "Failed to create surface. (From: " << src << ")" << std::endl;
+			exit(1);
 		}
 		
 		this->texture = SDL_CreateTextureFromSurface(screen->renderer, surface);
