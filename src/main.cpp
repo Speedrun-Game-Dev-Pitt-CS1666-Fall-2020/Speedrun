@@ -386,7 +386,7 @@ void runGame()
 
 		//check constraints and resolve conflicts
 		//apply forces based off gravity and collisions
-		user->detectCollisions(blocks);
+		
 		
 		// Clear black
 		SDL_SetRenderDrawColor(screen->renderer, 0x00, 0x00, 0x00, 0xFF);
@@ -401,8 +401,6 @@ void runGame()
 			b.x -= (user->x_pos-user->x_screenPos);
 			SDL_RenderFillRect(screen->renderer, &b);
 		}
-		
-		
 
 		// Player box
 		SDL_Rect player_rect = {user->x_screenPos, user->y_screenPos, user->width, user->height};
