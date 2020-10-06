@@ -63,12 +63,8 @@ void Player::applyForces()
     if (x_vel < -4)
         x_vel = -4;
 
-<<<<<<< Updated upstream
     if (cantJump)
         y_vel += y_accel;
-=======
-    y_vel += y_accel;
->>>>>>> Stashed changes
 
 
 }
@@ -98,13 +94,6 @@ void Player::detectCollisions(std::vector <SDL_Rect> r)
         if (isColliding(&block))
             handleCollision(&block);
     }
-<<<<<<< Updated upstream
-=======
-    // if (isColliding(r))
-    //     handleCollision(r);
-    // if (isColliding(r2))
-    //     handleCollision(r2);
->>>>>>> Stashed changes
 }
 
 bool Player::isColliding(SDL_Rect *r)
@@ -133,67 +122,13 @@ void Player::handleCollision(SDL_Rect *r)
 
     //get the x and y constraints for box based off of velocity direction
     float requiredX = 0;
-<<<<<<< Updated upstream
     float requiredY = 0;
-
-=======
-    float complementaryY;
-    float requiredY = 0;
-    float complementaryX;
-
-    //point and slope
-    //point is x_pos, y_pos
-    //slope is velocity, y_vel/x_vel
-    //box gives y or x
 
     if (x_vel < 0)
     {
         //hitting collision object from right
         //need x pos of player to be box + boxwidth
-        requiredX = r->x + r->w;
-    }
-    else if(x_vel > 0)
-    {
-        //hitting collision object from left
-        //need x pos of player to be box - playerwidth
-        requiredX = r->x - width;
-    }else{
-        requiredX = NAN;
-    }
-
-    if (y_vel < 0)
-    {
-        //hitting collision object from bot
-        //need y pos of player to be box+boxheight
-        requiredY = r->y + r->h;
-    }
-    else if(y_vel > 0)
-    {
-        //hitting collision object from top
-        //need y pos of player to be box - playerheight
-        requiredY = r->y - height;
-        //moved on top of object
-        //cantJump = false;
-    }else{
-        requiredY = NAN;
-    }
-
-    //solve for complementary x and complementary y
-    //y2 = y1 + slope (x2 - x1)
-    //doesn't work when x_vel == 0
-
-    complementaryY = y_pos + (y_vel / x_vel) * (requiredX - x_pos);
-
-    //doesn't work when y_vel == 0
-    complementaryX = x_pos + (x_vel / y_vel) * (requiredY - y_pos);
-
-    /*
->>>>>>> Stashed changes
-    if (x_vel < 0)
-    {
-        //hitting collision object from right
-        //need x pos of player to be box + boxwidth
-        requiredX = r->x + r->w;
+        requiredX = r->xs + r->w;
     }
     else
     {
@@ -216,10 +151,6 @@ void Player::handleCollision(SDL_Rect *r)
         //moved on top of object
         cantJump = false;
     }
-<<<<<<< Updated upstream
-=======
-    */
->>>>>>> Stashed changes
 
     //what is closer? complementary X to x_pos or complementary y to y_pos?
     if (fabs(y_pos - requiredY) < fabs(x_pos - requiredX))
@@ -244,8 +175,4 @@ void Player::handleCollision(SDL_Rect *r)
     }
 
     //if moving towards collisions in either x or y, set velocity in that direction to 0
-<<<<<<< Updated upstream
 }
-=======
-}
->>>>>>> Stashed changes
