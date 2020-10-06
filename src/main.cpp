@@ -323,11 +323,19 @@ void runGame()
 	SDL_Rect spring = {SCREEN_WIDTH/2 - 300, SCREEN_HEIGHT-180, 100, 20};
 	blocks = {block, anotherBlock, spring};*/
 
+	then = 0;
+
 	SDL_Event e;
 	bool gameon = true;
 	while (gameon)
 	{
-		
+		now = SDL_GetTicks();
+
+		if (now - then < 16)
+			continue;
+
+		then = now;		
+
 		user->applyForces();
 
 		//get intended motion based off input
@@ -378,7 +386,7 @@ void runGame()
 
 		//check constraints and resolve conflicts
 		//apply forces based off gravity and collisions
-		
+		user->detectCollisions(blocks);
 		
 		// Clear black
 		SDL_SetRenderDrawColor(screen->renderer, 0x00, 0x00, 0x00, 0xFF);
@@ -394,7 +402,7 @@ void runGame()
 			SDL_RenderFillRect(screen->renderer, &b);
 		}
 		
-		user->detectCollisions(blocks);
+		
 
 		// Player box
 		SDL_Rect player_rect = {user->x_screenPos, user->y_screenPos, user->width, user->height};
