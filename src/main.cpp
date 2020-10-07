@@ -322,14 +322,19 @@ void runGame(bool multiplayer)
 	SDL_Rect anotherBlock = {SCREEN_WIDTH/2 - 190, SCREEN_HEIGHT-120, 120, 20};
 	SDL_Rect spring = {SCREEN_WIDTH/2 - 300, SCREEN_HEIGHT-180, 100, 20};
 	blocks = {block, anotherBlock, spring};*/
-
+  then = 0;
 	char buffer[256];
 	bzero(buffer, 256);
 	SDL_Event e;
 	bool gameon = true;
 	while (gameon)
 	{
+    now = SDL_GetTicks();
 
+		if (now - then < 16)
+			continue;
+
+		then = now;	
 		user->applyForces();
 
 		//get intended motion based off input
@@ -353,13 +358,13 @@ void runGame(bool multiplayer)
 
 				}
 				if(keystate[SDL_SCANCODE_A]){
-					user->x_accel = -0.5;
+					user->x_accel = -1;
 					// if(user->x_vel > -4){
 					// 	user->x_vel += -2;
 					// }
 				}
 				if(keystate[SDL_SCANCODE_D]){
-					user->x_accel = 0.5;
+					user->x_accel = 1;
 					// if(user->x_vel < 4){
 					// 	user->x_vel += 2;
 					// }
