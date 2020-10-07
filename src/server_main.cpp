@@ -13,6 +13,7 @@ void error(const char *msg) {
 
 int main(int argc, char *argv[]) {
 	const char* hostName = "localhost";
+	int peepeebumbum = 69;
 	const uint16_t portNum = 3060;
 	int clientSocket, serverSocket;
 	char buffer[256]; // bytes to communicate

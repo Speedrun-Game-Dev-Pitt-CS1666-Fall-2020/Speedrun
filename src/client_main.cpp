@@ -1,27 +1,88 @@
-// SDL2 stuffs
 #include <iostream>
-#include <vector>
-#include <time.h>
 #include <SDL.h>
 #include <SDL_image.h>
+#include <SDL_ttf.h>
 
-// Networking stuffs
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <string.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <netdb.h> 
+#include "Game.h"
+#include "MenuState.h"
+#include "SpriteLib.h"
 
-// Our headers
-#include "XorShifter.h"
-#include "SimplexNoise.h"
-#include "Screen.h"
-#include "Image.h"
-#include "Player.h"
+bool initSDL()
+{
+	if (SDL_Init(SDL_INIT_EVERYTHING) != 0)
+	{
+		std::cerr << "Failed to load SDL" << std::endl;
+		return false;
+	}
+	if (IMG_Init(IMG_INIT_PNG) != IMG_INIT_PNG)
+	{
+		std::cerr << "Failed to initialize SDL_image" << std::endl;
+		return false;
+	}
+	if (TTF_Init()==-1)
+	{
+		std::cerr << "Failed to initialize SDL_ttf" << std::endl;
+		return false;
+	}
 
+	return true;
+}
+
+bool initGame(){
+	Game::screen = new Screen("Hamsterball Cave Racing", 1280, 720);
+	if(Game::screen->isClosed()){
+		std::cout << "Failed to initialize screen."	<< std::endl;
+		return false;
+	}
+	if(!SpriteLib::load()){
+		std::cout << "Failed at SpriteLib load." << std::endl;
+		return false;
+	}
+	SDL_SetRenderDrawBlendMode(Game::screen->renderer, SDL_BLENDMODE_BLEND);
+
+    Game::state_manager = new StateManager(10);
+	Game::state_manager->push(new MenuState());
+
+	Game::cursor = new Cursor();
+
+	return true;
+}
+
+bool clean(){
+	SDL_Quit();
+	delete Game::screen;
+	delete Game::state_manager;
+
+	return true;
+}
+
+int main(int argc, char **argv)
+{
+	std::cout << "Starting debug..." << std::endl;
+	// Initialize Game
+	if (initSDL() && initGame())
+	{
+
+		Game::start();
+		
+	}else{
+		std::cout << "Failed to initialize!" << std::endl;
+	}
+
+
+	if(clean()){
+		return 0;
+	}else{
+		std::cout << "Failed to clean up!" << std::endl;
+		return -1;
+	}
+
+	
+}
+
+
+
+/*
 #define CREDIT_SIZE 10
 #define MENU_SIZE 4
 
@@ -38,23 +99,24 @@ Screen *screen = nullptr;
 Uint32 before;
 Uint32 then;
 Uint32 delta;
-Uint32 now;
+Uint32 now; 
+float dt;
 std::vector <SDL_Rect> blocks;	//stores collidable blocks
 std::vector <SDL_Rect> decorative_blocks;	//stores non-collidable blocks
 
 // Function declarations
 bool init();
 void close();
-Image *loadImage(const char *, int, int);
+Sprite* loadImage(const char *, int, int);
 void runCredits();
 void runGame();
 void runMenu();
 Player* generateTerrain();
 SDL_Texture *loadTexture(std::string);
 
-Image *loadImage(const char *src, int w, int h)
+Sprite* loadImage(const char *src, int w, int h)
 {
-	return new Image(screen, src, 0, 0, w, h);
+	return new Sprite(screen, src, 0, 0, w, h);
 }
 
 SDL_Texture *loadTexture(std::string fname)
@@ -79,25 +141,7 @@ SDL_Texture *loadTexture(std::string fname)
 	return newText;
 }
 
-bool init()
-{
 
-	if (SDL_Init(SDL_INIT_EVERYTHING) != 0)
-	{
-		std::cerr << "Failed to load SDL" << std::endl;
-		return false;
-	}
-	screen = new Screen("SpeedRun", SCREEN_WIDTH, SCREEN_HEIGHT);
-	if (IMG_Init(IMG_INIT_PNG) != IMG_INIT_PNG)
-	{
-		std::cerr << "Failed to initialize SDL_image" << std::endl;
-		return false;
-	}
-
-	then = SDL_GetTicks();
-
-	return true;
-}
 
 void close()
 {
@@ -113,11 +157,11 @@ Player* generateTerrain()
 	decorative_blocks.clear();
 	
 	srand (time(NULL));
-	int rand (void);
+	//int rand (void);
 	
 	XorShifter *rng = new XorShifter(412001000);
-	
-	SimplexNoise *simp = new SimplexNoise(rand() % 1000000);
+
+	SimplexNoise *simp = new SimplexNoise(rng->next() % 1000000);
 	simp->freq = 0.05f;
 	simp->octaves = 2;
 	simp->updateFractalBounds();
@@ -183,32 +227,11 @@ Player* generateTerrain()
 	}
 	
 	return user;
-	
 }
 
 void runCredits()
 {
-
-	XorShifter *rng = new XorShifter(412001000);
-	SimplexNoise *simp = new SimplexNoise(420);
-	simp->freq = 0.02f;
-	simp->octaves = 2;
-	simp->updateFractalBounds();
-
-	Image *credits[CREDIT_SIZE] = {
-
-		loadImage("../res/rjd68.png", 800, 600),
-		loadImage("../res/alex.png", 1280, 720),
-		loadImage("../res/andrew.png", 1280, 720),
-		loadImage("../res/cas380.png", 1280, 720),
-		loadImage("../res/connor.png", 1280, 720),
-		loadImage("../res/jacob.png", 1280, 720),
-		loadImage("../res/lucas.png", 1280, 720),
-		loadImage("../res/robert.png", 1280, 720),
-		loadImage("../res/spencer.png", 1280, 720),
-		loadImage("../res/ryanyang.png", 1280, 720)};
-
-	float dt;
+	
 
 	while (!screen->isClosed())
 	{
@@ -227,28 +250,9 @@ void runCredits()
 
 			SDL_SetRenderDrawColor(screen->renderer, 255, 0, 0, 255);
 			SDL_RenderClear(screen->renderer);
-			SDL_Rect pixel = {0, 0, 10, 10};
-			for (int x = 0; x < 128; x++)
-			{
-				for (int y = 0; y < 72; y++)
-				{
-					//int grey = (int)(rng->fnext() * 256);
+			
+			CUT OUT
 
-					Uint8 grey = (int)((simp->getFractal((float)x, (float)y, ((float)now) / 16.f)) * 256);
-
-					SDL_SetRenderDrawColor(screen->renderer, grey, grey, grey, 255);
-					pixel.x = x * 10;
-					pixel.y = y * 10;
-					SDL_RenderFillRect(screen->renderer, &pixel);
-				}
-			}
-			int index = (now - before) / 3000;
-			if (index >= CREDIT_SIZE)
-				break;
-			//std::cout << index << std::endl;
-			Image *img = credits[index];
-			//std::cout << img->bounds->w << std::endl;
-			SDL_RenderCopy(screen->renderer, img->texture, img->bounds, screen->bounds);
 			SDL_RenderPresent(screen->renderer);
 
 			screen->pollEvents();
@@ -269,7 +273,7 @@ void runGame()
 	/*SDL_Rect block = {SCREEN_WIDTH/2, SCREEN_HEIGHT-20, 200, 20};
 	SDL_Rect anotherBlock = {SCREEN_WIDTH/2 - 190, SCREEN_HEIGHT-120, 120, 20};
 	SDL_Rect spring = {SCREEN_WIDTH/2 - 300, SCREEN_HEIGHT-180, 100, 20};
-	blocks = {block, anotherBlock, spring};*/
+	blocks = {block, anotherBlock, spring};*
 
 	SDL_Event e;
 	bool gameon = true;
@@ -327,7 +331,6 @@ void runGame()
 		//check constraints and resolve conflicts
 		//apply forces based off gravity and collisions
 		
-		
 		// Clear black
 		SDL_SetRenderDrawColor(screen->renderer, 0x00, 0x00, 0x00, 0xFF);
 		SDL_RenderClear(screen->renderer);
@@ -365,7 +368,7 @@ void runMultiTestClient()
 	1. Create a socket with the socket() system call
 	2. Connect the socket to the address of the server using the connect() system call
 	3. Send and receive data. There are a number of ways to do this, but the simplest is to use the read() and write() system calls.
-	*/
+	*
 
 	const char* hostName = "localhost";
 	const uint16_t portNum = 3060;
@@ -420,7 +423,7 @@ void runMultiTestClient()
 		error("ERROR reading from socket");
 	}
 	printf("Read: %s\n",buffer);
-	*/
+	*
 
 	// Start the game!
 	runGame();
@@ -436,7 +439,7 @@ void runMenu()
 	bool menuon = true;
 	int menuPos = 0;
 
-	Image *menu[MENU_SIZE] = {
+	Sprite* menu[MENU_SIZE] = {
 		loadImage("../res/play.png", 1280, 720),
 		loadImage("../res/creds.png", 1280, 720),
 		loadImage("../res/mult.png", 1280, 720),
@@ -503,28 +506,12 @@ void runMenu()
 
 			SDL_SetRenderDrawColor(screen->renderer, 0x00, 0x00, 0x00, 0xFF);
 			SDL_RenderClear(screen->renderer);
-			Image *img = menu[menuPos];
+			Sprite* img = menu[menuPos];
 			SDL_RenderCopy(screen->renderer, img->texture, img->bounds, screen->bounds);
 			SDL_RenderPresent(screen->renderer);
 		}
 	}
 }
 
-int main(int argc, char **argv)
-{
 
-	// Initialize Game
-	if (!init())
-	{
-		std::cout << "Failed to initialize!" << std::endl;
-		close();
-		return 1;
-	}
-
-	runMenu();
-
-	// Close Game
-	close();
-
-	return 0;
-}
+*/
