@@ -1,3 +1,7 @@
+# Requirements
+
+You must be using linux.
+
 # Dependencies
 
 In order for the project to build, you must have your environment configured correctly.
