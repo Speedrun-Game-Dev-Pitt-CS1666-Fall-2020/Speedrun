@@ -1,17 +1,16 @@
 # Dependencies
 
-In order for the project to build, you must have your environment configured correctly. 
+In order for the project to build, you must have your environment configured correctly.
 
 ## Linux
 
-Linux users will need the default installation of SDL2 and SDL2_image, obtained via:
-1. `apt-cache search libsdl2`
-2. `sudo apt-get install libsdl2-dev`
+Linux users will need the default installation of SDL2 and some of its extensions, obtained via:
+
+1. `sudo apt-get install libsdl2-dev`
+2. `sudo apt-get install libsdl2-image-dev`
+3. `sudo apt-get install libsdl2-ttf-dev`
 
 and...
-
-1. `apt-cache search libsdl2-image`
-2. `sudo apt-get install libsdl2-image-dev`
 
 ## Windows
 
