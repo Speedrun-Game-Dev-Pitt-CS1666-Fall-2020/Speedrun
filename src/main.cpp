@@ -138,7 +138,7 @@ Player* generateTerrain()
 
 		int val_i = (int)val_f;
 
-		cave_nums[test + 18] = val_i;
+		cave_nums[test + range] = val_i;
 	}
 
 	//cave_area is a boolean array that tracks which blocks are part of the walls and which are part of the cave
@@ -181,15 +181,21 @@ Player* generateTerrain()
 
 
 				//mark the blocks above and below the current block as being in the cave, to increase width
-				int y_above = (y - BOX_WIDTH)/BOX_WIDTH;
-				if (y_above >= 0)
+				if (y != 0)
 				{
-					cave_area[y_above][x/BOX_WIDTH] = true;
+					int y_above = (y - BOX_WIDTH)/BOX_WIDTH;
+					if (y_above >= 0)
+					{
+						cave_area[y_above][x/BOX_WIDTH] = true;
+					}
 				}
-				int y_below = (y + BOX_WIDTH)/BOX_WIDTH;
-				if (y_below <= WORLD_HEIGHT/BOX_WIDTH)
+				if (y != WORLD_HEIGHT - BOX_HEIGHT)
 				{
-					cave_area[y_below][x/BOX_WIDTH] = true;
+					int y_below = (y + BOX_WIDTH)/BOX_WIDTH;
+					if (y_below <= WORLD_HEIGHT/BOX_WIDTH)
+					{
+						cave_area[y_below][x/BOX_WIDTH] = true;
+					}
 				}
 			}
 		}
