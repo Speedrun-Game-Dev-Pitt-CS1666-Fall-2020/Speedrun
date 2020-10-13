@@ -30,12 +30,12 @@
 constexpr int SCREEN_WIDTH = 1280;
 constexpr int SCREEN_HEIGHT = 720;
 
-constexpr int WORLD_HEIGHT = 720 * 10;
-
 //for move player tutorial, may move to player object later
 constexpr int BOX_WIDTH = 20;
 constexpr int BOX_HEIGHT = 20;
-constexpr int WORLD_DEPTH = 3000;
+constexpr int WORLD_DEPTH = 7200;
+
+constexpr int WORLD_HEIGHT = 720 * 10 + 20 * BOX_HEIGHT * 3; // 3 caverns, each 20 boxes tall
 
 // Globals
 Screen *screen = nullptr;
@@ -138,7 +138,7 @@ Player* generateTerrain()
 
 		int val_i = (int)val_f;
 
-		cave_nums[test + 18] = val_i;
+		cave_nums[test + range] = val_i;
 	}
 
 	//cave_area is a boolean array that tracks which blocks are part of the walls and which are part of the cave
@@ -154,17 +154,69 @@ Player* generateTerrain()
 
 	bool player_created = false;
 	Player *user;
+	int cave_nums_index = 0;
+	
+	//"gaps" define where the caverns will be placed
+	int gap1 = (rand() % 20) + 20;
+	int gap2 = (rand() % 20) + 70;
+	int gap3 = (rand() % 20) + 120;
 
 	//for each block on the screen
 	for (int y = 0; y < WORLD_HEIGHT; y = y + BOX_HEIGHT)
 	{
-		bool b = true;
+		//place cavern at current location
+		if (y / BOX_HEIGHT == gap1 || y / BOX_HEIGHT == gap2 || y / BOX_HEIGHT == gap3)		
+		{
+			//cavern should be 20 boxes tall
+			int cavern_end = y + 20 * BOX_HEIGHT;
+			int count = 0;
+			for (; y < cavern_end; y = y + BOX_HEIGHT)
+			{
+				for (int x = 0; x < SCREEN_WIDTH; x = x + BOX_WIDTH)
+				{
+					int x_left = (x - BOX_WIDTH)/BOX_WIDTH;
+					if (x_left < 0)
+					{
+						x_left = 0;
+					}
+					
+					int x_right = (x + BOX_WIDTH)/BOX_WIDTH;
+					if (x_right >= SCREEN_WIDTH)
+					{
+						x_right = (SCREEN_WIDTH - BOX_WIDTH)/BOX_WIDTH;
+					}
 
+					//expand cavern size
+					if (count < 5 && (cave_area[(y - BOX_WIDTH)/BOX_WIDTH][x/BOX_WIDTH] == true ||
+					    cave_area[(y - BOX_WIDTH)/BOX_WIDTH][x_left] == true ||
+					    cave_area[(y - BOX_WIDTH)/BOX_WIDTH][x_right] == true))
+					{
+						cave_area[y/BOX_WIDTH][x/BOX_WIDTH] = true;
+					}
+					//keep cavern size constant
+					else if (count >= 5 && count < 15 && cave_area[(y - BOX_WIDTH)/BOX_WIDTH][x/BOX_WIDTH] == true)
+					{
+						cave_area[y/BOX_WIDTH][x/BOX_WIDTH] = true;
+					}
+					//shrink cavern size
+					else if (count >= 15 && count < 20 && (cave_area[(y - BOX_WIDTH)/BOX_WIDTH][x/BOX_WIDTH] == true &&
+					         cave_area[(y - BOX_WIDTH)/BOX_WIDTH][x_left] == true &&
+					         cave_area[(y - BOX_WIDTH)/BOX_WIDTH][x_right] == true))
+					{
+						cave_area[y/BOX_WIDTH][x/BOX_WIDTH] = true;
+					}
+				}
+				count++;
+			}
+			continue;
+		}
+		bool b = true;
+		
 		//"start" indicates the relative position of the left wall of the cave to the screen at a given elevation
-		int start = cave_nums[y / BOX_HEIGHT] - 11;
+		int start = cave_nums[cave_nums_index] - 11;
 
 		//"end" indicates the relative position of the right wall of the cave to the screen at a given elevation
-		int end = cave_nums[y / BOX_HEIGHT] + 10;
+		int end = cave_nums[cave_nums_index] + 10;
 
 		//for each block at elevation y, compare the relative x position of the block on the screen to the
 		//"start" and "end" positions
@@ -181,18 +233,26 @@ Player* generateTerrain()
 
 
 				//mark the blocks above and below the current block as being in the cave, to increase width
-				int y_above = (y - BOX_WIDTH)/BOX_WIDTH;
-				if (y_above >= 0)
+				if (y != 0)
 				{
-					cave_area[y_above][x/BOX_WIDTH] = true;
+					int y_above = (y - BOX_WIDTH)/BOX_WIDTH;
+					if (y_above >= 0)
+					{
+						cave_area[y_above][x/BOX_WIDTH] = true;
+					}
 				}
-				int y_below = (y + BOX_WIDTH)/BOX_WIDTH;
-				if (y_below <= WORLD_HEIGHT/BOX_WIDTH)
+				if (y != WORLD_HEIGHT - BOX_HEIGHT)
 				{
-					cave_area[y_below][x/BOX_WIDTH] = true;
+					int y_below = (y + BOX_WIDTH)/BOX_WIDTH;
+					if (y_below <= WORLD_HEIGHT/BOX_WIDTH)
+					{
+						cave_area[y_below][x/BOX_WIDTH] = true;
+					}
 				}
 			}
 		}
+		
+		cave_nums_index++;
 	}
 
 	//use our cave_area array to determine where to render blocks
@@ -234,6 +294,7 @@ Player* generateTerrain()
 
 
 	}
+	
 	return user;
 }
 
@@ -294,7 +355,7 @@ void runCredits()
 					SDL_RenderFillRect(screen->renderer, &pixel);
 				}
 			}
-			int index = (now - before) / 3000;
+			int index = (now - before) / 7200;
 			if (index >= CREDIT_SIZE)
 				break;
 			//std::cout << index << std::endl;
@@ -322,7 +383,7 @@ void runGame(bool multiplayer)
 	SDL_Rect anotherBlock = {SCREEN_WIDTH/2 - 190, SCREEN_HEIGHT-120, 120, 20};
 	SDL_Rect spring = {SCREEN_WIDTH/2 - 300, SCREEN_HEIGHT-180, 100, 20};
 	blocks = {block, anotherBlock, spring};*/
-  then = 0;
+	then = 0;
 	char buffer[256];
 	bzero(buffer, 256);
 	SDL_Event e;
@@ -382,7 +443,14 @@ void runGame(bool multiplayer)
 
 		// Move box
 		user->updatePosition();
-
+		//if user position on screen < 720/3
+			//then change user position and user position on screen, not blocks.
+		//if user position on screen is > 1440/3
+			//then change user position and user position on screeen, not blocks.
+		//else
+			//change block locations
+		//X, always change X of player and player screen pos, never block
+		
 		//check constraints and resolve conflicts
 		//apply forces based off gravity and collisions
 		
@@ -433,14 +501,23 @@ void runGame(bool multiplayer)
 
 		// Draw boxes
 		SDL_SetRenderDrawColor(screen->renderer, 0xFF, 0x00, 0x00, 0xFF);
-
-		for (auto b: blocks)
+		
+		if(user->y_screenPos < 720/3 )
 		{
-			b.y -= (user->y_pos-user->y_screenPos);
-			b.x -= (user->x_pos-user->x_screenPos);
-			SDL_RenderFillRect(screen->renderer, &b);
+			user->y_screenPos += user->y_vel;//problem on start
+			for (auto b: blocks)
+			{
+				SDL_RenderFillRect(screen->renderer, &b);
+			}
 		}
-
+		else
+		{
+			for (auto b: blocks)
+			{
+				b.y -= (user->y_pos-user->y_screenPos);
+				SDL_RenderFillRect(screen->renderer, &b);
+			}
+		}
 		user->detectCollisions(blocks);
 		
 		float mX = 0;
@@ -493,7 +570,7 @@ void runGame(bool multiplayer)
 			std::cout << "Client at position: (" << mX << ", " << mY << ")" << std::endl;
 		}
 		
-		SDL_Rect player_rect = {user->x_screenPos, user->y_screenPos, user->width, user->height};
+		SDL_Rect player_rect = {user->x_pos, user->y_screenPos, user->width, user->height};
 		SDL_RenderCopy(screen->renderer, user->player_texture, NULL, &player_rect);
 		SDL_RenderPresent(screen->renderer);
 	}
