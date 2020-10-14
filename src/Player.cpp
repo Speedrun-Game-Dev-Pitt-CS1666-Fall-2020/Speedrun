@@ -63,8 +63,9 @@ void Player::applyForces()
     if (x_vel < -4)
         x_vel = -4;
 
-    if (cantJump)
-        y_vel += y_accel;
+
+    //if (cantJump)
+    y_vel += y_accel;
 
 
 }
@@ -184,13 +185,13 @@ void Player::handleCollision(SDL_Rect *r)
         //dist formula
         if(powf((y_pos - complementaryY), 2) + powf((x_pos - requiredX), 2) < powf((x_pos - complementaryX), 2) + powf((y_pos - requiredY), 2)){
             //required X closer
-            y_pos = complementaryY;
+            //y_pos = complementaryY;
             x_pos = requiredX;
 
             x_vel = 0;
 
         }else{
-            x_pos = complementaryX;
+            //x_pos = complementaryX;
             y_pos = requiredY;
 
             //if falling, cant jump is false
@@ -203,29 +204,4 @@ void Player::handleCollision(SDL_Rect *r)
 
     }
 
-/*
-    //what is closer? complementary X to x_pos or complementary y to y_pos?
-    if (fabs(y_pos - requiredY) < fabs(x_pos - requiredX))
-    {
-        //x_pos = complementaryX;
-        y_pos = requiredY;
-        y_vel = 0;
-
-        if (r->w == 100)
-        {
-            y_vel += -30;
-            cantJump = true;
-        }
-    }
-    else
-    {
-        //use requiredX bc compY closer
-        x_pos = requiredX;
-        //y_pos = complementaryY;
-        x_vel = 0;
-        x_accel = 0;
-    }
-*/
-
-    //if moving towards collisions in either x or y, set velocity in that direction to 0
 }
