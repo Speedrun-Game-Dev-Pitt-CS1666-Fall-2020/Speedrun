@@ -502,7 +502,7 @@ void runGame(bool multiplayer)
 		// Draw boxes
 		SDL_SetRenderDrawColor(screen->renderer, 0xFF, 0x00, 0x00, 0xFF);
 		
-		if(user->y_screenPos < 720/3 || user->y_screenPos > 1440/3)
+		if(user->y_screenPos < 720/3 )
 		{
 			user->y_screenPos += user->y_vel;//problem on start
 			for (auto b: blocks)
@@ -515,7 +515,6 @@ void runGame(bool multiplayer)
 			for (auto b: blocks)
 			{
 				b.y -= (user->y_pos-user->y_screenPos);
-				b.x -= (user->x_pos-user->x_screenPos);
 				SDL_RenderFillRect(screen->renderer, &b);
 			}
 		}
