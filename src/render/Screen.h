@@ -14,8 +14,6 @@ public:
 
 	inline bool isClosed() const { return _closed; }
 
-	void pollEvents();
-
 private:
 	bool init(const char* title, int w, int h);
 	bool _closed;

@@ -28,17 +28,3 @@ bool Screen::init(const char* title, int w, int h) {
 	this->bounds = new SDL_Rect{0, 0, w, h};
 	return true;
 }
-
-void Screen::pollEvents() {
-	SDL_Event event;
-
-	if (SDL_PollEvent(&event)) {
-		switch (event.type) {
-		case SDL_QUIT:
-			_closed = true;
-			break;
-		default:
-			break;
-		}
-	}
-}

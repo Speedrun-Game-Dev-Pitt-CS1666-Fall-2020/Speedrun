@@ -1,7 +1,7 @@
 #include "SimplexNoise.h"
 #include "XorShifter.h"
 #include <iostream>
-#include <random>
+#include <cmath>
 
 const float GRAD_X[12] = {
 	1,-1,1,-1,
@@ -264,7 +264,7 @@ float SimplexNoise::getFractal(float x, float y, float z) const {//this is why p
 	z *= freq;
 	float sum = single(x, y, permIndex[0]);
 	float amp = 1;
-
+	
 	for (int i = 1; i < octaves; i++) {
 		x *= lacunarity;
 		y *= lacunarity;

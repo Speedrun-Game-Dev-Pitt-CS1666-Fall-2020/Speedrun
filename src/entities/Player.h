@@ -14,7 +14,8 @@ public:
     float x_accel;
     float y_accel;
     float friction;
-
+	int x_screenPos;
+	int y_screenPos;
     int width;
     int height;
 
