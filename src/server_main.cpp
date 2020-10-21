@@ -7,6 +7,7 @@
 #include <netinet/in.h>
 #include <errno.h>
 
+
 void error(const char *msg) {
 	perror(msg);
 	exit(1);
@@ -33,6 +34,7 @@ int main(int argc, char *argv[]) {
 
 
 	// Create our server socket
+
 	serverSocket = socket(AF_INET, SOCK_STREAM, 0);
 	if (serverSocket < 0) {
 		error("Error creating socket...");
@@ -45,14 +47,17 @@ int main(int argc, char *argv[]) {
     }
 
 	// Create our server and client address object
+
 	struct sockaddr_in serverAddress;
 	struct sockaddr_in clientAddress;
 	bzero((char*) &serverAddress, sizeof(serverAddress));
 	bzero((char*) &clientAddress, sizeof(clientAddress));
+
 	socklen_t clientLength = sizeof(clientAddress);
 	// again, the client variables will be used for the current client
 
 	// Populate our server address object
+
 	serverAddress.sin_family = AF_INET;
 	serverAddress.sin_addr.s_addr = INADDR_ANY;
 	serverAddress.sin_port = htons(portNum);
@@ -144,5 +149,6 @@ int main(int argc, char *argv[]) {
 
 	// NOTE: Since there is a max of 4 players, if more than 4 try to join, they will be blocked indefinitely (even if a client disconnects to make room)
 	close(serverSocket);
+
 	return 0; 
 }
