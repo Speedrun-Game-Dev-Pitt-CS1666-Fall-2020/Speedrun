@@ -6,16 +6,14 @@
 class TerrainMap {
     
 public: 
-    char**field;
+    char** chunks;
     int seed;
-    int width;
-    int height;
+    int cw,ch,w,h;
 
     TerrainMap(int seed, int width, int height);
+    ~TerrainMap();
 
+    void get(int x, int y);
 private:
 
-    void genSurface();
-    void genTube();
-    void genNoise();
 };

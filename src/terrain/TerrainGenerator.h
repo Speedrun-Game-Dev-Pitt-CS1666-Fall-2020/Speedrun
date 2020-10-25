@@ -16,6 +16,7 @@ public:
     SDL_Point* getDebugTubePoints();
 
 private:
+    SDL_Point* tubePoints;
 
     void genSurface();
     void genTube();

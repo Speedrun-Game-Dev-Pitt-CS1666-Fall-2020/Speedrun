@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Vec2.h"
+#include <SDL.h>
 
 class Cursor {
     
@@ -11,5 +12,6 @@ class Cursor {
         bool isLeftClick;
         bool isLeftDown;
 
-        void tick();
+        void start();
+        void handle_event(SDL_Event e);
 };

@@ -1,6 +1,7 @@
 #include "MenuState.h"
 #include "Game.h"
 #include "CreditsState.h"
+#include "PlayState.h"
 
 
 MenuState::MenuState(){
@@ -13,9 +14,8 @@ MenuState::MenuState(){
 
 bool MenuState::tick() {
     if(playBtn->tick() && is_active){
-
-        std::cout << "I clicked play!" << std::endl;
-
+        Game::state_manager->push(new PlayState());
+        return true;
     }
     if(optionsBtn->tick() && is_active){
         std::cout << "I clicked options!" << std::endl;
