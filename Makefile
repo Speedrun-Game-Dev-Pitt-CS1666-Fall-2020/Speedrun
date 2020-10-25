@@ -4,3 +4,5 @@ BUILD_DIR ?= ./build
 
 clean:
 	$(RM) -r $(BUILD_DIR)
+	find . -type f -name '*.d' -exec rm {} 
+	find . -type f -name '*.o' -exec rm {} ++
