@@ -5,11 +5,11 @@
 #include <vector>
 #include <iostream>
 #include <SDL.h>
-
+/*
 namespace MapGenerator {
 
 }
-/*
+
 #define TAU 6.2831853071795f
 #define PI 3.14159265358979f
 #define INFLUENCE 0.05f//scale of 1-2
@@ -86,5 +86,4 @@ SDL_Point* TerrainGenerator::getDebugTubePoints(){
     }
 
     return points;
-}
-*/
+}*/

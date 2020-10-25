@@ -17,6 +17,8 @@ public:
 
 private:
 
+    SDL_Point* tubePoints;
+
     void genSurface();
     void genTube();
     void genNoise();
