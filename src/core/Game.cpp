@@ -32,7 +32,6 @@ namespace Game {
 
                 _running = InputManager::pollEvents() && state_manager->size!=0;
                 if(_running){
-                    
                     SDL_SetRenderDrawColor(screen->renderer, 0x00, 0x00, 0x00, 0xFF);
                     SDL_RenderClear(screen->renderer);
 

@@ -5,10 +5,12 @@
 #include <vector>
 #include <iostream>
 #include <SDL.h>
+
 /*
 namespace MapGenerator {
 
 }
+
 
 #define TAU 6.2831853071795f
 #define PI 3.14159265358979f

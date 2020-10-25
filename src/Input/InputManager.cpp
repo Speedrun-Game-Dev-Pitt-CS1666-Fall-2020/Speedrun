@@ -16,8 +16,5 @@ namespace InputManager {
             
             Game::cursor->handle_event(event);
         }
-
-        return true;
     }
 }
-

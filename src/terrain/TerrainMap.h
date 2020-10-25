@@ -16,5 +16,4 @@ public:
     void get(int x, int y);
 private:
 
-    
 };

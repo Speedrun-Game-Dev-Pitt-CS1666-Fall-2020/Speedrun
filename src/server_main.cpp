@@ -5,6 +5,8 @@
 #include <sys/types.h> 
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <errno.h>
+
 
 void error(const char *msg) {
 	perror(msg);
@@ -12,25 +14,50 @@ void error(const char *msg) {
 }
 
 int main(int argc, char *argv[]) {
+	
+	// Welcome to the Server code!
+	// Let's define some variables...
+
+	// Connection settings:
 	const char* hostName = "localhost";
-	int peepeebumbum = 69;
 	const uint16_t portNum = 3060;
-	int clientSocket, serverSocket;
 	char buffer[256]; // bytes to communicate
 
-	// Create our socket
+	// Server's stuff:
+	int serverSocket;
+	fd_set socketReadSet; // look at select() manpage to learn about the sets
+
+	// Clients' stuff:
+	const int max_players = 4;
+	int clientSockets[max_players]; // all of our connected clients
+	int clientSocket; // we will fill this with the current client we're talking to
+
+
+	// Create our server socket
+
 	serverSocket = socket(AF_INET, SOCK_STREAM, 0);
 	if (serverSocket < 0) {
 		error("Error creating socket...");
 	}
 
-	// Create our server and client objects
+	// set server socket to allow for multiple connections
+	int option = 1;
+    if (setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, (char*) &option, sizeof(option)) < 0) {
+		error("Error allowing for multiple connections...");
+    }
+
+	// Create our server and client address object
+
 	struct sockaddr_in serverAddress;
 	struct sockaddr_in clientAddress;
 	bzero((char*) &serverAddress, sizeof(serverAddress));
 	bzero((char*) &clientAddress, sizeof(clientAddress));
 
-	// Populate our server object
+	socklen_t clientLength = sizeof(clientAddress);
+	// again, the client variables will be used for the current client
+
+	// Populate our server address object
+
 	serverAddress.sin_family = AF_INET;
 	serverAddress.sin_addr.s_addr = INADDR_ANY;
 	serverAddress.sin_port = htons(portNum);
@@ -40,32 +67,87 @@ int main(int argc, char *argv[]) {
 		error("Error while binding...");
 	}
 
+	// initialize all client sockets to 0 (no connection! - remember, sockets are just ints)
+    for (int i = 0; i < max_players; i++) {
+        clientSockets[i] = 0;
+    }
+
+	// Listen for connections to the server socket, up to 5 on waiting list
+	if (listen(serverSocket, 5) < 0) {
+		error("Error trying to listen...");
+    }
+	
 	while (true) {
-		// Listen for connections to the server socket, up to 5 on waiting list
-		listen(serverSocket, 5);
-		socklen_t clientLength = sizeof(clientAddress);
-		// accept blocks until a client connects
-		clientSocket = accept(serverSocket, (struct sockaddr*) &clientAddress, &clientLength);
-		if (clientSocket < 0) {
-			error("Error accepting client...");
-		}
+		// start off each iteration with our read set = {Server}
+        FD_ZERO(&socketReadSet);
+        FD_SET(serverSocket, &socketReadSet);
+        int max_fds = serverSocket; // we will have to find the max file descriptor value
+		
+        // add the client sockets to our read set
+        for (int i = 0; i < max_players; i++) {
+			clientSocket = clientSockets[i];
+            
+			// if connected (valid socket descriptor), add it to the read set
+			if (clientSocket > 0) {
+				FD_SET(clientSocket, &socketReadSet);
+			}
+            
+            // new highest file descriptor!
+            if (clientSocket > max_fds) {
+				max_fds = clientSocket;
+			}
+        }
+		
+        // wait indefinitely for activity on one of the sockets
+        int activity = select(max_fds + 1, &socketReadSet, NULL/*socketWriteSet*/, NULL, NULL); // again, look at select() manpage to understand arguments
+        if ((activity < 0) && (errno != EINTR)) {
+            error("Error on select!");
+        }
+		
+        // If the server is in the read set, there's an incoming connection
+        if (FD_ISSET(serverSocket, &socketReadSet)) {
+            if ((clientSocket = accept(serverSocket, (struct sockaddr*) &clientAddress, &clientLength)) < 0) {
+                error("Error on accept!");
+            }
+             
+            //add new client socket to the array of sockets
+            for (int i = 0; i < max_players; i++) {
+                // find the first empty position in the array
+				if (clientSockets[i] == 0) {
+                    clientSockets[i] = clientSocket;
+                    printf("Added new client to clientSockets[%d] = %d\n", i, clientSocket);
+					break;
+                }
+            }
+        }
+        
+        // Find the socket there was activity on
+        for (int i = 0; i < max_players; i++) {
+            clientSocket = clientSockets[i];
+			int value;
+             
+            if (FD_ISSET(clientSocket, &socketReadSet)) {
+				// let's read in what the client wrote to us
+				bzero(buffer, 256);
+				value = read(clientSocket, buffer, 255);
 
-		// Read the message from the client
-		bzero(buffer, 256);
-		int n = read(clientSocket, buffer, 255);
-		if (n < 0) {
-			error("Error reading from client...");
-		}
+                if (value == 0) {
+                    // The client disconnected
+                    close(clientSocket);
+                    clientSockets[i] = 0;
+                } else {
+					printf("Received message from Client %d: \"%s\"\n", clientSocket, buffer);
 
-		printf("Received message from %d: %s\n", serverAddress.sin_addr.s_addr, buffer);
-
-		n = write(clientSocket, "I got your message", 18);
-		if (n < 0) {
-			error("Error writing to client...");
-		}
+                    // ESSENTIAL SO SELECT() DOESN'T BLOCK
+					send(clientSocket, buffer, strlen(buffer), 0);
+					// i dont think the client ever does anything with this
+					// BUT IT IS EXPERIMENTALLY NECESSARY
+                }
+            }
+        }
 	}
 
-	close(clientSocket);
+	// NOTE: Since there is a max of 4 players, if more than 4 try to join, they will be blocked indefinitely (even if a client disconnects to make room)
 	close(serverSocket);
 
 	return 0; 
