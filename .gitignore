@@ -1,7 +1,0 @@
-*.exe
-.vscode
-
-bin
-include
-lib
-build
