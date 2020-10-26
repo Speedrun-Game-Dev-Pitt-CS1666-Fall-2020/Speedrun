@@ -16,4 +16,4 @@ Users will need the default installation of SDL2 and some of its extensions, obt
 
 **Make sure you run the executable from inside the `bin` directory!** If you run it from somewhere else, your images may not load (the image paths will be wrong from that location)!
 
-Simply run `make_client` or `make_server`. If you do not have a `bin` folder, the Makefile will create one for you (as well as the `build` folder) and store the executable in there.
+Simply run `make_client` or `make_server`. If you do not have a `bin` folder, the Makefile will create one for you and store the executable in there.
