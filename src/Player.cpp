@@ -1,5 +1,11 @@
 #include "Player.h"
 #include <cmath>
+#include <iostream>
+#include <stdlib.h>
+#include <vector>
+#include <time.h>
+#include <SDL.h>
+#include <SDL_image.h>
 
 Player::Player(float x, float y, int w, int h, SDL_Texture *t) : x_pos{x}, y_pos{y}, width{w}, height{h}, player_texture{t}
 {
@@ -90,10 +96,19 @@ void Player::detectCollisions(std::vector <SDL_Rect> r)
         cantJump = false;
     }
 
+    //make friction .3 which gets updated if hit frictionless block to less
+    friction = 0.3;
+
+
+    int a = 0;
     for (auto block: r)
     {
-        if (isColliding(&block))
-            handleCollision(&block);
+        if (isColliding(&block)){
+            //for now also pass in a, later will get blocktype from struct
+            handleCollision(&block, a);
+            //std::cout << a << std::endl;
+        }
+        a++;
     }
 }
 
@@ -117,8 +132,21 @@ bool Player::isColliding(SDL_Rect *r)
 
 //assuming detect collisions will never change player velocity variables
 //spring traps + friction and stuff change accel variables
-void Player::handleCollision(SDL_Rect *r)
+
+//FOR NOW, int a gets block height for block type. will get block type from struct
+void Player::handleCollision(SDL_Rect *r, int a)
 {
+    float bounce = 15;
+    std::cout << a << std::endl;
+
+    if(a < 60){
+        std::cout << " normal" << std::endl;
+    }else if (a < 120){
+        std::cout << " frictionless" << std::endl;
+        friction = 0.1;
+    }else if (a >= 120){
+        std::cout << " bouncy" << std::endl;
+    }
 
     //Check player velocity direction for
 
@@ -171,14 +199,39 @@ void Player::handleCollision(SDL_Rect *r)
             cantJump = false;
         }
 
-        y_vel = 0;
+        //not bouncy
+        //not bouncy
+        if(a < 120){
+            y_vel = 0;
+        }else{  //bouncy
+            if(y_vel > 0){
+                y_vel = -bounce;
+                cantJump = true;
+            }else{
+                y_vel = bounce;
+            }
+        }
+    
+        //y_vel = 0;
     
         
     }else if(y_vel == 0){
         y_pos = complementaryY;
         x_pos = requiredX;
 
-        x_vel = 0;
+                //not bouncy
+        //not bouncy
+        if(a < 120){
+            x_vel = 0;
+        }else{  //bouncy
+            if(x_vel > 0){
+                x_vel = -bounce;
+            }else{
+                x_vel = bounce;
+            }
+        }
+
+        //x_vel = 0;
     }else {
 
         //which point is closer to current position?
@@ -188,7 +241,18 @@ void Player::handleCollision(SDL_Rect *r)
             //y_pos = complementaryY;
             x_pos = requiredX;
 
-            x_vel = 0;
+            //not bouncy
+            if(a < 120){
+                x_vel = 0;
+            }else{  //bouncy
+                if(x_vel > 0){
+                    x_vel = -bounce;
+                }else{
+                    x_vel = bounce;
+                }
+            }
+
+            //x_vel = 0;
 
         }else{
             //x_pos = complementaryX;
@@ -198,8 +262,19 @@ void Player::handleCollision(SDL_Rect *r)
             if(y_vel > 0)
                 cantJump = false;
             
+            //not bouncy
+            if(a < 120){
+                y_vel = 0;
+            }else{  //bouncy
+                if(y_vel > 0){
+                    y_vel = -bounce;
+                    cantJump = true;
+                }else{
+                    y_vel = bounce;
+                }
+            }
 
-            y_vel = 0;
+            //y_vel = 0;
         }
 
     }
