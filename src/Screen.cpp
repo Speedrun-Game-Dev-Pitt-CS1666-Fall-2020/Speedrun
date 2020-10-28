@@ -1,6 +1,6 @@
 #include "Screen.h"
 #include <iostream>
-#include "Player.h"
+
 
 Screen::Screen(const char* title, int w, int h) {
 	_closed = !init(title, w, h);
@@ -28,18 +28,7 @@ bool Screen::init(const char* title, int w, int h) {
 	this->bounds = new SDL_Rect{0, 0, w, h};
 	return true;
 }
-void Screen::updatePosition(Player user){
-		bounds->x = user.x_pos - 640;
-		bounds->y = user.y_pos -360;
-		if(bounds->x > bounds->w)
-			bounds->x = bounds->w;
-		if(bounds->x < 0)
-			bounds->x = 0;
-		if(bounds->y > bounds->h)
-			bounds->y = bounds->h;
-		if(bounds->y < 0)
-			bounds->y = 0;
-}
+
 void Screen::pollEvents() {
 	SDL_Event event;
 
