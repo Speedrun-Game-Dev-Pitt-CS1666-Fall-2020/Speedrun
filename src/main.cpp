@@ -44,6 +44,7 @@ Uint32 then;
 Uint32 delta;
 Uint32 now;
 std::vector <SDL_Rect> blocks;	//stores collidable blocks
+std::vector <SDL_Rect> copyblocks;
 std::vector <SDL_Rect> decorative_blocks;	//stores non-collidable blocks
 int clientSocket;	//Socket for connecting to the server
 
@@ -299,6 +300,7 @@ Player* generateTerrain()
 }
 
 
+
 Player* generateTerrainSeed(int seed)
 {
 	blocks.clear();
@@ -485,7 +487,6 @@ Player* generateTerrainSeed(int seed)
 	return user;
 }
 
-
 void runCredits()
 {
 
@@ -600,12 +601,12 @@ void runGame(bool multiplayer)
 	}
 
 
-	//Define the blocks
-	/*SDL_Rect block = {SCREEN_WIDTH/2, SCREEN_HEIGHT-20, 200, 20};
-	SDL_Rect anotherBlock = {SCREEN_WIDTH/2 - 190, SCREEN_HEIGHT-120, 120, 20};
-	SDL_Rect spring = {SCREEN_WIDTH/2 - 300, SCREEN_HEIGHT-180, 100, 20};
-	blocks = {block, anotherBlock, spring};*/
+
+	screen->bounds->x = user->x_pos - 1280/2;
+	screen->bounds->y = user->y_pos - 720/2;
+	copyblocks = blocks;
 	then = 0;
+	char buffer[256];
 	bzero(buffer, 256);
 	SDL_Event e;
 	bool gameon = true;
@@ -664,16 +665,7 @@ void runGame(bool multiplayer)
 
 		// Move box
 		user->updatePosition();
-		//if user position on screen < 720/3
-			//then change user position and user position on screen, not blocks.
-		//if user position on screen is > 1440/3
-			//then change user position and user position on screeen, not blocks.
-		//else
-			//change block locations
-		//X, always change X of player and player screen pos, never block
-		
-		//check constraints and resolve conflicts
-		//apply forces based off gravity and collisions
+		screen->updatePosition(*user);
 		
 		if(multiplayer == true)
 		{
@@ -722,25 +714,15 @@ void runGame(bool multiplayer)
 
 		// Draw boxes
 		SDL_SetRenderDrawColor(screen->renderer, 0xFF, 0x00, 0x00, 0xFF);
-		
-		if(user->y_screenPos < 720/3 )
-		{
-			user->y_screenPos += user->y_vel;//problem on start
-			for (auto b: blocks)
+		for (auto b: copyblocks)
 			{
-				SDL_RenderFillRect(screen->renderer, &b);
+				b.x = b.x - screen->bounds->x;
+				b.y = b.y - screen->bounds->y;
+				SDL_RenderDrawRect(screen->renderer, &b);
 			}
-		}
-		else
-		{
-			for (auto b: blocks)
-			{
-				b.y -= (user->y_pos-user->y_screenPos);
-				SDL_RenderFillRect(screen->renderer, &b);
-			}
-		}
-		user->detectCollisions(blocks);
-		
+		user->detectCollisions(copyblocks);
+		copyblocks = blocks;
+
 		float mX = 0;
 		float mY = 0;
 
@@ -791,7 +773,9 @@ void runGame(bool multiplayer)
 			std::cout << "Client at position: (" << mX << ", " << mY << ")" << std::endl;
 		}
 		
-		SDL_Rect player_rect = {user->x_pos, user->y_screenPos, user->width, user->height};
+		int playerx = user->x_pos-screen->bounds->x;
+		int playery = user->y_pos-screen->bounds->y;
+		SDL_Rect player_rect = {playerx, playery, user->width, user->height};
 		SDL_RenderCopy(screen->renderer, user->player_texture, NULL, &player_rect);
 		SDL_RenderPresent(screen->renderer);
 	}

@@ -1,6 +1,6 @@
 #pragma once
 #include <SDL.h>
-
+#include "Player.h"
 class Screen {
 public:
 	SDL_Window* window = nullptr;
@@ -13,7 +13,7 @@ public:
 	~Screen();
 
 	inline bool isClosed() const { return _closed; }
-
+	void updatePosition(Player user);
 	void pollEvents();
 
 private:

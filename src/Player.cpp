@@ -16,8 +16,6 @@ Player::Player(float x, float y, int w, int h, SDL_Texture *t) : x_pos{x}, y_pos
     y_accel = 1;
     cantJump = true;
     friction = .3;
-	x_screenPos = x_pos;
-	y_screenPos = y_pos;
 }
 
 void Player::updatePosition()
@@ -232,7 +230,6 @@ void Player::handleCollision(SDL_Rect *r, int a)
         }
 
         //x_vel = 0;
-
     }else {
 
         //which point is closer to current position?
