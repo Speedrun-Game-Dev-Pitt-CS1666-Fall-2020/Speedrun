@@ -1,5 +1,11 @@
 #include "Player.h"
 #include <cmath>
+#include <iostream>
+#include <stdlib.h>
+#include <vector>
+#include <time.h>
+#include <SDL.h>
+#include <SDL_image.h>
 
 Player::Player(float x, float y, int w, int h, SDL_Texture *t) : x_pos{x}, y_pos{y}, width{w}, height{h}, player_texture{t}
 {
@@ -10,7 +16,6 @@ Player::Player(float x, float y, int w, int h, SDL_Texture *t) : x_pos{x}, y_pos
     y_accel = 1;
     cantJump = true;
     friction = .3;
-
 }
 
 void Player::updatePosition()
@@ -62,8 +67,9 @@ void Player::applyForces()
     if (x_vel < -4)
         x_vel = -4;
 
-    if (cantJump)
-        y_vel += y_accel;
+
+    //if (cantJump)
+    y_vel += y_accel;
 
 
 }
@@ -88,10 +94,19 @@ void Player::detectCollisions(std::vector <SDL_Rect> r)
         cantJump = false;
     }
 
+    //make friction .3 which gets updated if hit frictionless block to less
+    friction = 0.3;
+
+
+    int a = 0;
     for (auto block: r)
     {
-        if (isColliding(&block))
-            handleCollision(&block);
+        if (isColliding(&block)){
+            //for now also pass in a, later will get blocktype from struct
+            handleCollision(&block, a);
+            //std::cout << a << std::endl;
+        }
+        a++;
     }
 }
 
@@ -115,8 +130,21 @@ bool Player::isColliding(SDL_Rect *r)
 
 //assuming detect collisions will never change player velocity variables
 //spring traps + friction and stuff change accel variables
-void Player::handleCollision(SDL_Rect *r)
+
+//FOR NOW, int a gets block height for block type. will get block type from struct
+void Player::handleCollision(SDL_Rect *r, int a)
 {
+    float bounce = 15;
+    std::cout << a << std::endl;
+
+    if(a < 60){
+        std::cout << " normal" << std::endl;
+    }else if (a < 120){
+        std::cout << " frictionless" << std::endl;
+        friction = 0.1;
+    }else if (a >= 120){
+        std::cout << " bouncy" << std::endl;
+    }
 
     //Check player velocity direction for
 
@@ -169,62 +197,84 @@ void Player::handleCollision(SDL_Rect *r)
             cantJump = false;
         }
 
-        y_vel = 0;
+        //not bouncy
+        //not bouncy
+        if(a < 120){
+            y_vel = 0;
+        }else{  //bouncy
+            if(y_vel > 0){
+                y_vel = -bounce;
+                cantJump = true;
+            }else{
+                y_vel = bounce;
+            }
+        }
+    
+        //y_vel = 0;
     
         
     }else if(y_vel == 0){
         y_pos = complementaryY;
         x_pos = requiredX;
 
-        x_vel = 0;
+                //not bouncy
+        //not bouncy
+        if(a < 120){
+            x_vel = 0;
+        }else{  //bouncy
+            if(x_vel > 0){
+                x_vel = -bounce;
+            }else{
+                x_vel = bounce;
+            }
+        }
+
+        //x_vel = 0;
     }else {
 
         //which point is closer to current position?
         //dist formula
         if(powf((y_pos - complementaryY), 2) + powf((x_pos - requiredX), 2) < powf((x_pos - complementaryX), 2) + powf((y_pos - requiredY), 2)){
             //required X closer
-            y_pos = complementaryY;
+            //y_pos = complementaryY;
             x_pos = requiredX;
 
-            x_vel = 0;
+            //not bouncy
+            if(a < 120){
+                x_vel = 0;
+            }else{  //bouncy
+                if(x_vel > 0){
+                    x_vel = -bounce;
+                }else{
+                    x_vel = bounce;
+                }
+            }
+
+            //x_vel = 0;
 
         }else{
-            x_pos = complementaryX;
+            //x_pos = complementaryX;
             y_pos = requiredY;
 
             //if falling, cant jump is false
             if(y_vel > 0)
                 cantJump = false;
             
+            //not bouncy
+            if(a < 120){
+                y_vel = 0;
+            }else{  //bouncy
+                if(y_vel > 0){
+                    y_vel = -bounce;
+                    cantJump = true;
+                }else{
+                    y_vel = bounce;
+                }
+            }
 
-            y_vel = 0;
+            //y_vel = 0;
         }
 
     }
 
-/*
-    //what is closer? complementary X to x_pos or complementary y to y_pos?
-    if (fabs(y_pos - requiredY) < fabs(x_pos - requiredX))
-    {
-        //x_pos = complementaryX;
-        y_pos = requiredY;
-        y_vel = 0;
-
-        if (r->w == 100)
-        {
-            y_vel += -30;
-            cantJump = true;
-        }
-    }
-    else
-    {
-        //use requiredX bc compY closer
-        x_pos = requiredX;
-        //y_pos = complementaryY;
-        x_vel = 0;
-        x_accel = 0;
-    }
-*/
-
-    //if moving towards collisions in either x or y, set velocity in that direction to 0
 }

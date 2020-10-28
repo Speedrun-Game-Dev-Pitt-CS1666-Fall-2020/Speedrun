@@ -30,6 +30,6 @@ public:
 
     void detectCollisions(std::vector <SDL_Rect> r);
     bool isColliding(SDL_Rect* r);
-    void handleCollision(SDL_Rect* r);
+    void handleCollision(SDL_Rect* r, int a);
     
 };
