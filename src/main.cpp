@@ -299,6 +299,193 @@ Player* generateTerrain()
 }
 
 
+Player* generateTerrain(int seed)
+{
+	blocks.clear();
+	decorative_blocks.clear();
+
+	srand (seed);
+	int rand (void);
+
+	XorShifter *rng = new XorShifter(412001000);
+
+	SimplexNoise *simp = new SimplexNoise(rand() % 1000000);
+	simp->freq = 0.05f;
+	simp->octaves = 2;
+	simp->updateFractalBounds();
+
+	int cave_nums[WORLD_HEIGHT / BOX_HEIGHT];
+
+
+	//generate values from a "line" of noise, one value for each row of blocks
+	int range = WORLD_HEIGHT/BOX_WIDTH/2;
+	for (int test = -range; test < range; test++)
+	{
+		float val_f = simp->getSingle(1, test) * 100;
+
+		int val_i = (int)val_f;
+
+		cave_nums[test + range] = val_i;
+	}
+
+	//cave_area is a boolean array that tracks which blocks are part of the walls and which are part of the cave
+	//a value of "true" means that the corresponding block is part of the cave, and will not be rendered
+	bool cave_area[WORLD_HEIGHT/BOX_WIDTH][SCREEN_WIDTH/BOX_WIDTH];
+	for(int i = 0; i < WORLD_HEIGHT/BOX_WIDTH; i++)
+	{
+		for(int j = 0; j < SCREEN_WIDTH/BOX_WIDTH; j++)
+		{
+			cave_area[i][j]=false;
+		}
+	}
+
+	bool player_created = false;
+	Player *user;
+	int cave_nums_index = 0;
+	
+	//"gaps" define where the caverns will be placed
+	int gap1 = (rand() % 20) + 20;
+	int gap2 = (rand() % 20) + 70;
+	int gap3 = (rand() % 20) + 120;
+
+	//for each block on the screen
+	for (int y = 0; y < WORLD_HEIGHT; y = y + BOX_HEIGHT)
+	{
+		//place cavern at current location
+		if (y / BOX_HEIGHT == gap1 || y / BOX_HEIGHT == gap2 || y / BOX_HEIGHT == gap3)		
+		{
+			//cavern should be 20 boxes tall
+			int cavern_end = y + 20 * BOX_HEIGHT;
+			int count = 0;
+			for (; y < cavern_end; y = y + BOX_HEIGHT)
+			{
+				for (int x = 0; x < SCREEN_WIDTH; x = x + BOX_WIDTH)
+				{
+					int x_left = (x - BOX_WIDTH)/BOX_WIDTH;
+					if (x_left < 0)
+					{
+						x_left = 0;
+					}
+					
+					int x_right = (x + BOX_WIDTH)/BOX_WIDTH;
+					if (x_right >= SCREEN_WIDTH)
+					{
+						x_right = (SCREEN_WIDTH - BOX_WIDTH)/BOX_WIDTH;
+					}
+
+					//expand cavern size
+					if (count < 5 && (cave_area[(y - BOX_WIDTH)/BOX_WIDTH][x/BOX_WIDTH] == true ||
+					    cave_area[(y - BOX_WIDTH)/BOX_WIDTH][x_left] == true ||
+					    cave_area[(y - BOX_WIDTH)/BOX_WIDTH][x_right] == true))
+					{
+						cave_area[y/BOX_WIDTH][x/BOX_WIDTH] = true;
+					}
+					//keep cavern size constant
+					else if (count >= 5 && count < 15 && cave_area[(y - BOX_WIDTH)/BOX_WIDTH][x/BOX_WIDTH] == true)
+					{
+						cave_area[y/BOX_WIDTH][x/BOX_WIDTH] = true;
+					}
+					//shrink cavern size
+					else if (count >= 15 && count < 20 && (cave_area[(y - BOX_WIDTH)/BOX_WIDTH][x/BOX_WIDTH] == true &&
+					         cave_area[(y - BOX_WIDTH)/BOX_WIDTH][x_left] == true &&
+					         cave_area[(y - BOX_WIDTH)/BOX_WIDTH][x_right] == true))
+					{
+						cave_area[y/BOX_WIDTH][x/BOX_WIDTH] = true;
+					}
+				}
+				count++;
+			}
+			continue;
+		}
+		bool b = true;
+		
+		//"start" indicates the relative position of the left wall of the cave to the screen at a given elevation
+		int start = cave_nums[cave_nums_index] - 11;
+
+		//"end" indicates the relative position of the right wall of the cave to the screen at a given elevation
+		int end = cave_nums[cave_nums_index] + 10;
+
+		//for each block at elevation y, compare the relative x position of the block on the screen to the
+		//"start" and "end" positions
+		for (int x = 0; x < SCREEN_WIDTH; x = x + BOX_WIDTH)
+		{
+			//relative x position of the block on the screen
+			int ratio = (float)x / (float)SCREEN_WIDTH * 100;
+
+			//if ratio is between start & end, we are in the cave
+			if (ratio > start && ratio < end)
+			{
+				//indicate that we are in the cave by marking the corresponding location in array as "true"
+				cave_area[y/BOX_WIDTH][x/BOX_WIDTH] = true;
+
+
+				//mark the blocks above and below the current block as being in the cave, to increase width
+				if (y != 0)
+				{
+					int y_above = (y - BOX_WIDTH)/BOX_WIDTH;
+					if (y_above >= 0)
+					{
+						cave_area[y_above][x/BOX_WIDTH] = true;
+					}
+				}
+				if (y != WORLD_HEIGHT - BOX_HEIGHT)
+				{
+					int y_below = (y + BOX_WIDTH)/BOX_WIDTH;
+					if (y_below <= WORLD_HEIGHT/BOX_WIDTH)
+					{
+						cave_area[y_below][x/BOX_WIDTH] = true;
+					}
+				}
+			}
+		}
+		
+		cave_nums_index++;
+	}
+
+	//use our cave_area array to determine where to render blocks
+	for (int y = 0; y < WORLD_HEIGHT; y = y + BOX_HEIGHT)
+	{
+
+		bool b = true;
+		for (int x = 0; x < SCREEN_WIDTH; x = x + BOX_WIDTH)
+		{
+			//create left wall of cave
+			if (cave_area[y/BOX_WIDTH][x/BOX_WIDTH] && b)
+			{
+				SDL_Rect block = {0, y, BOX_WIDTH * (x / BOX_WIDTH), BOX_HEIGHT};
+				blocks.push_back(block);
+				b = false;
+
+				//spawn the player in at the first available "free" block
+				if (!player_created)
+				{
+					user = new Player(x, y, 20, 20, loadTexture("../res/Guy.png"));
+					player_created = true;
+				}
+			}
+
+			//create right wall of cave
+			if (!cave_area[y/BOX_WIDTH][x/BOX_WIDTH] && !b)
+			{
+				SDL_Rect block = {x, y, BOX_WIDTH *100, BOX_HEIGHT};
+				blocks.push_back(block);
+				break;
+			}
+			else if (x == SCREEN_WIDTH - BOX_WIDTH)
+			{
+				SDL_Rect block = {x, y, BOX_WIDTH *100, BOX_HEIGHT};
+				blocks.push_back(block);
+				break;
+			}
+		}
+
+
+	}
+	
+	return user;
+}
+
+
 void runCredits()
 {
 
@@ -374,8 +561,43 @@ void runGame(bool multiplayer)
 	// Create player object with x, y, w, h, texture
 	//Player *user = new Player(10, 0, 20, 20, loadTexture("../res/Guy.png"));
 
-	//create the player and generate the terrain
-	Player *user = generateTerrain();
+	Player *user = NULL:
+	char buffer[256];
+	bzero(buffer, 256);
+
+	if(multiplayer)
+	{
+		srand(time(NULL))
+		int rand (void);
+		
+		int lR = sprintf(buffer, "%i", (rand() + 2));
+		bzero(buffer, 256);
+		int n = write(clientSocket, buffer, strlen(buffer));
+
+		if (n < 0)
+		{
+			herror("Error writing random number to server...");
+		}
+		
+		bzero(buffer, 256);
+		n = read(clientSocket, buffer, 255);
+
+		if (n < 0) 
+		{
+			herror("ERROR reading from socket");
+		}
+		else
+		{
+			int seed = 1;
+			seed = atoi(buffer);
+			*user = generateTerrain(seed);
+		}
+	}
+	else
+	{
+		//create the player and generate the terrain
+		*user = generateTerrain();
+	}
 
 
 	//Define the blocks
@@ -384,7 +606,6 @@ void runGame(bool multiplayer)
 	SDL_Rect spring = {SCREEN_WIDTH/2 - 300, SCREEN_HEIGHT-180, 100, 20};
 	blocks = {block, anotherBlock, spring};*/
 	then = 0;
-	char buffer[256];
 	bzero(buffer, 256);
 	SDL_Event e;
 	bool gameon = true;
