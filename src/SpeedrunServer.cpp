@@ -16,7 +16,7 @@ void error(const char *msg) {
 
 static const int max_players = 4;
 
-private int findSocketIndex(int socket, int socketArray[max_players])
+int findSocketIndex(int socket, int socketArray[max_players])
 {
 	
 	int index = -1;
@@ -167,12 +167,12 @@ int main(int argc, char *argv[]) {
             if (FD_ISSET(clientSocket, &socketReadSet)) {
 				// let's read in what the client wrote to us
 				bzero(buffer, 256);
-				value = read(clientSocket, buffer, 255);
+				int value = read(clientSocket, buffer, 255);
 
                 if (value == 0) {
                     // The client disconnected
                     close(clientSocket);
-					toldPlayerSeed[findSocketIndex(client, clientSockets)] = false;
+					toldPlayerSeed[findSocketIndex(clientSocket, clientSockets)] = false;
                     clientSockets[i] = 0;
                 } else {
 					printf("Received message from Client %d: \"%s\"\n", clientSocket, buffer);
@@ -202,6 +202,7 @@ int main(int argc, char *argv[]) {
 						// i dont think the client ever does anything with this
 						// BUT IT IS EXPERIMENTALLY NECESSARY
 					}
+					send(clientSocket, buffer, strlen(buffer), 0);
                 }
             }
         }
