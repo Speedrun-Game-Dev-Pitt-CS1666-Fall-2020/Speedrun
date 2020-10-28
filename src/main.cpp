@@ -8,6 +8,7 @@
 
 // Networking stuffs
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
 #include <sys/types.h>
@@ -297,6 +298,7 @@ Player* generateTerrain()
 	return user;
 }
 
+
 Player* generateTerrain(int seed)
 {
 	blocks.clear();
@@ -483,6 +485,7 @@ Player* generateTerrain(int seed)
 	return user;
 }
 
+
 void runCredits()
 {
 
@@ -557,7 +560,7 @@ void runGame(bool multiplayer)
 {
 	// Create player object with x, y, w, h, texture
 	//Player *user = new Player(10, 0, 20, 20, loadTexture("../res/Guy.png"));
-	
+
 	Player *user = NULL:
 	char buffer[256];
 	bzero(buffer, 256);
@@ -595,6 +598,7 @@ void runGame(bool multiplayer)
 		//create the player and generate the terrain
 		*user = generateTerrain();
 	}
+
 
 	//Define the blocks
 	/*SDL_Rect block = {SCREEN_WIDTH/2, SCREEN_HEIGHT-20, 200, 20};
