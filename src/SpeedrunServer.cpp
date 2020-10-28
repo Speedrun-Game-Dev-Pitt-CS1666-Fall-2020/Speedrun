@@ -12,6 +12,28 @@ void error(const char *msg) {
 	exit(1);
 }
 
+static const int max_players = 4;
+
+int findSocketIndex(int socket, int socketArray[max_players])
+{
+	
+	int index = -1;
+	
+	for(int i = 0; i < max_players; i++)
+	{
+		
+		if(socket == socketArray[i])
+		{
+			index = i;
+			break;
+		}
+		
+	}
+	
+	return index;
+	
+}
+
 int main(int argc, char *argv[]) {
 	
 	// Welcome to the Server code!
@@ -124,19 +146,44 @@ int main(int argc, char *argv[]) {
             if (FD_ISSET(clientSocket, &socketReadSet)) {
 				// let's read in what the client wrote to us
 				bzero(buffer, 256);
-				value = read(clientSocket, buffer, 255);
+				int value = read(clientSocket, buffer, 255);
 
                 if (value == 0) {
                     // The client disconnected
                     close(clientSocket);
+
+					toldPlayerSeed[findSocketIndex(clientSocket, clientSockets)] = false;
                     clientSockets[i] = 0;
                 } else {
 					printf("Received message from Client %d: \"%s\"\n", clientSocket, buffer);
-
-                    // ESSENTIAL SO SELECT() DOESN'T BLOCK
+					
+					int currentIndex = findSocketIndex(clientSocket, clientSockets);
+					if(toldPlayerSeed[currentIndex] == false) //setup, basically just passing the seed around
+					{
+						toldPlayerSeed[currentIndex] = true;
+						if(seed == -1)
+						{
+							seed = atoi(buffer);
+							bzero(buffer, 256);
+							int lS = sprintf(buffer, "%i", seed);
+							send(clientSocket, buffer, strlen(buffer), 0);
+						}
+						else
+						{
+							bzero(buffer, 256);
+							int lS = sprintf(buffer, "%i", seed);
+							send(clientSocket, buffer, strlen(buffer), 0);
+						}
+					}
+					else //repeating game loop, basically just movement
+					{
+						// ESSENTIAL SO SELECT() DOESN'T BLOCK
+						send(clientSocket, buffer, strlen(buffer), 0);
+						// i dont think the client ever does anything with this
+						// BUT IT IS EXPERIMENTALLY NECESSARY
+					}
 					send(clientSocket, buffer, strlen(buffer), 0);
-					// i dont think the client ever does anything with this
-					// BUT IT IS EXPERIMENTALLY NECESSARY
+
                 }
             }
         }
