@@ -28,7 +28,8 @@ bool Screen::init(const char* title, int w, int h) {
 	this->bounds = new SDL_Rect{0, 0, w, h};
 	return true;
 }
-void Screen::updatePosition(Player user){
+void Screen::updatePosition(Player user)
+{
 		bounds->x = user.x_pos - 640;
 		bounds->y = user.y_pos -360;
 		if(bounds->x > bounds->w)
