@@ -299,7 +299,7 @@ Player* generateTerrain()
 }
 
 
-Player* generateTerrain(int seed)
+Player* generateTerrainSeed(int seed)
 {
 	blocks.clear();
 	decorative_blocks.clear();
@@ -561,17 +561,17 @@ void runGame(bool multiplayer)
 	// Create player object with x, y, w, h, texture
 	//Player *user = new Player(10, 0, 20, 20, loadTexture("../res/Guy.png"));
 
-	Player *user = NULL:
+	Player *user = NULL;
 	char buffer[256];
 	bzero(buffer, 256);
 
 	if(multiplayer)
 	{
-		srand(time(NULL))
+		srand(time(NULL));
 		int rand (void);
 		
-		int lR = sprintf(buffer, "%i", (rand() + 2));
 		bzero(buffer, 256);
+		int lR = sprintf(buffer, "%i", (rand() + 2));
 		int n = write(clientSocket, buffer, strlen(buffer));
 
 		if (n < 0)
@@ -590,13 +590,13 @@ void runGame(bool multiplayer)
 		{
 			int seed = 1;
 			seed = atoi(buffer);
-			*user = generateTerrain(seed);
+			user = generateTerrainSeed(seed);
 		}
 	}
 	else
 	{
 		//create the player and generate the terrain
-		*user = generateTerrain();
+		user = generateTerrain();
 	}
 
 
