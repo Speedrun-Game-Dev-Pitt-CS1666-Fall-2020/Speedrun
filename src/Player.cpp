@@ -232,6 +232,7 @@ void Player::handleCollision(SDL_Rect *r, int a)
         }
 
         //x_vel = 0;
+
     }else {
 
         //which point is closer to current position?
