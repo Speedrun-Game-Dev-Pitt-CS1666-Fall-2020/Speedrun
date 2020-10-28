@@ -47,6 +47,7 @@ std::vector <SDL_Rect> blocks;	//stores collidable blocks
 std::vector <SDL_Rect> copyblocks;
 std::vector <SDL_Rect> decorative_blocks;	//stores non-collidable blocks
 int clientSocket;	//Socket for connecting to the server
+
 // Function declarations
 bool init();
 void close();
@@ -373,9 +374,12 @@ void runGame(bool multiplayer)
 {
 	// Create player object with x, y, w, h, texture
 	//Player *user = new Player(10, 0, 20, 20, loadTexture("../res/Guy.png"));
+	
 	SDL_RenderClear(screen->renderer);
 	//create the player and generate the terrain
 	Player *user = generateTerrain();
+
+
 	screen->bounds->x = user->x_pos - 1280/2;
 	screen->bounds->y = user->y_pos - 720/2;
 	copyblocks = blocks;
@@ -386,7 +390,7 @@ void runGame(bool multiplayer)
 	bool gameon = true;
 	while (gameon)
 	{
-		now = SDL_GetTicks();
+    now = SDL_GetTicks();
 
 		if (now - then < 16)
 			continue;
@@ -436,6 +440,7 @@ void runGame(bool multiplayer)
 				}
 			}
 		}
+
 		// Move box
 		user->updatePosition();
 		screen->updatePosition(*user);
@@ -480,12 +485,13 @@ void runGame(bool multiplayer)
 				herror("Error writing to server...");
 			}
 		}
+
 		// Clear black
 		SDL_SetRenderDrawColor(screen->renderer, 0x00, 0x00, 0x00, 0xFF);
 		SDL_RenderClear(screen->renderer);
+
 		// Draw boxes
 		SDL_SetRenderDrawColor(screen->renderer, 0xFF, 0x00, 0x00, 0xFF);
-	
 		for (auto b: copyblocks)
 			{
 				b.x = b.x - screen->bounds->x;
@@ -494,7 +500,7 @@ void runGame(bool multiplayer)
 			}
 		user->detectCollisions(copyblocks);
 		copyblocks = blocks;
-		
+
 		float mX = 0;
 		float mY = 0;
 
@@ -544,6 +550,7 @@ void runGame(bool multiplayer)
 		{
 			std::cout << "Client at position: (" << mX << ", " << mY << ")" << std::endl;
 		}
+		
 		int playerx = user->x_pos-screen->bounds->x;
 		int playery = user->y_pos-screen->bounds->y;
 		SDL_Rect player_rect = {playerx, playery, user->width, user->height};
@@ -557,6 +564,7 @@ void error(const char *msg)
     perror(msg);
     exit(1);
 }
+
 void setupMultiplayer()
 {
 
@@ -609,27 +617,33 @@ void runMultiTestClient()
 	const char* hostName = "localhost";
 	const uint16_t portNum = 3060;
 	char buffer[256]; // bytes to communicate
+
 	// Create our socket
 	int clientSocket = socket(AF_INET, SOCK_STREAM, 0);
 	if (clientSocket < 0) {
 		error("Error creating socket...");
 	}
+
 	// Create our server object
 	struct sockaddr_in serverAddress;
 	bzero((char*) &serverAddress, sizeof(serverAddress));
+
 	// Get server info
 	struct hostent* server = gethostbyname(hostName);
 	if (server == NULL) {
 		error("Host doesn't exist...");
 	}
+
 	// Populate the server object
 	serverAddress.sin_family = AF_INET;
 	bcopy((char*) server->h_addr, (char*) &serverAddress.sin_addr.s_addr, server->h_length);
+
 	// Connect to the server
 	serverAddress.sin_port = htons(portNum);
 	if (connect(clientSocket,(struct sockaddr*) &serverAddress,sizeof(serverAddress)) < 0) {
 		error("Error connecting to server...");
 	}
+
 	// Client has successfully connected to server
 	// Create a message to send to it
 	bzero(buffer,256);
@@ -639,11 +653,13 @@ void runMultiTestClient()
 	buffer[3] = 'g';
 	buffer[4] = '!';
 	buffer[5] = '\n';
+
 	// Write the data to the server
 	int n = write(clientSocket,buffer,strlen(buffer));
 	if (n < 0) {
 		error("Error writing to server...");
 	}
+
 	/* Read what the server has to say back (Nothing)
 	bzero(buffer,256);
 	n = read(clientSocket,buffer,255);
@@ -651,13 +667,15 @@ void runMultiTestClient()
 		error("ERROR reading from socket");
 	}
 	printf("Read: %s\n",buffer);
+
+
 	// Start the game!
 	runGame();
+
 	// Player disconnected
 	close(clientSocket);
 	*/
 }
-
 
 void runMenu()
 {
