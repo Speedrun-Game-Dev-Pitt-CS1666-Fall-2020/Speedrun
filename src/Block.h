@@ -1,19 +1,22 @@
 #pragma once
 #include <SDL.h>
-#include <iostream>
 
+#include <SDL_image.h>
+#include <vector>
 
-class Block {
-	
+class Block
+{
+
 public:
-	SDL_Rect* block_rect;
-    bool is_bouncy;
-    bool is_frictionless;
-    bool is_winning;
-    short color_r;
-    short color_g;
-    short color_b;
+    SDL_Rect block_rect;
+    //0 = normal, 1 = frictionless, 2 = bouncy, 3 = win
+    int block_type;
 
-    Block(SDL_Rect* b, bool ib, bool f, bool iw, short cr, short cg, short cb);
+    //colors
+    int red;
+    int green;
+    int blue;
 
+    Block(SDL_Rect r, int b);
+    
 };
