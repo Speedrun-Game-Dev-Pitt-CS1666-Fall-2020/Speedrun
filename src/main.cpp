@@ -160,9 +160,9 @@ Player* generateTerrain()
 	int cave_nums_index = 0;
 	
 	//"gaps" define where the caverns will be placed
-	int gap1 = (rand() % 20) + 20;
-	int gap2 = (rand() % 20) + 70;
-	int gap3 = (rand() % 20) + 120;
+	int gap1 = (rand() % 20) + 100;
+	int gap2 = (rand() % 20) + 200;
+	int gap3 = (rand() % 20) + 300;
 
 	//for each block on the screen
 	for (int y = 0; y < WORLD_HEIGHT; y = y + BOX_HEIGHT)
@@ -257,10 +257,14 @@ Player* generateTerrain()
 		
 		cave_nums_index++;
 	}
-
+	
+	int block_type = rand() % 3;
+	
 	//use our cave_area array to determine where to render blocks
 	for (int y = 0; y < WORLD_HEIGHT; y = y + BOX_HEIGHT)
 	{
+		if (y % 1000 == 0)
+			block_type = rand() % 3;
 
 		bool b = true;
 		for (int x = 0; x < SCREEN_WIDTH; x = x + BOX_WIDTH)
@@ -269,7 +273,7 @@ Player* generateTerrain()
 			if (cave_area[y/BOX_WIDTH][x/BOX_WIDTH] && b)
 			{
 				SDL_Rect block = {0, y, BOX_WIDTH * (x / BOX_WIDTH), BOX_HEIGHT};
-				Block* bubby = new Block(block, 0); //normal block
+				Block* bubby = new Block(block, block_type); //normal block
 				//Block* bubby = new Block(block, 1); //icy block
 				//Block* bubby = new Block(block, 2); //bouncy block
 				blocks.push_back(*bubby);
@@ -288,7 +292,7 @@ Player* generateTerrain()
 			if (!cave_area[y/BOX_WIDTH][x/BOX_WIDTH] && !b)
 			{
 				SDL_Rect block = {x, y, BOX_WIDTH *100, BOX_HEIGHT};
-				Block* bubby = new Block(block, 0); //normal block
+				Block* bubby = new Block(block, block_type); //normal block
 				//Block* bubby = new Block(block, 1); //icy block
 				//Block* bubby = new Block(block, 2); //bouncy block
 				blocks.push_back(*bubby);
@@ -298,7 +302,7 @@ Player* generateTerrain()
 			else if (x == SCREEN_WIDTH - BOX_WIDTH)
 			{
 				SDL_Rect block = {x, y, BOX_WIDTH *100, BOX_HEIGHT};
-				Block* bubby = new Block(block, 0); //normal block
+				Block* bubby = new Block(block, block_type); //normal block
 				//Block* bubby = new Block(block, 1); //icy block
 				//Block* bubby = new Block(block, 2); //bouncy block
 				blocks.push_back(*bubby);
@@ -309,6 +313,10 @@ Player* generateTerrain()
 
 
 	}
+
+	SDL_Rect final_block = {0, WORLD_HEIGHT, BOX_WIDTH *100, BOX_HEIGHT};
+	Block* bubby = new Block(final_block, 3);
+	blocks.push_back(*bubby);
 	
 	return user;
 }
