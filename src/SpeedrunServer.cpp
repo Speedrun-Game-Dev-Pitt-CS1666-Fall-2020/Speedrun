@@ -53,6 +53,7 @@ int main(int argc, char *argv[]) {
 	// Clients' stuff:
 	int clientSockets[max_players]; // all of our connected clients
 	int clientSocket; // we will fill this with the current client we're talking to
+	int numberOfConnectedPlayers = 0;
 
 
 	// Create our server socket
@@ -107,6 +108,26 @@ int main(int argc, char *argv[]) {
 	char player4[33];
 	bool toldPlayerSeed[max_players];
 	
+	for(int i = 0; i < player1.size(); i++)
+	{
+		
+		if(i = 16)
+		{
+			player1[i] = '|';
+			player2[i] = '|';
+			player3[i] = '|';
+			player4[i] = '|';
+		}
+		else
+		{
+			player1[i] = 'n';
+			player2[i] = 'n';
+			player3[i] = 'n';
+			player4[i] = 'n';
+		}
+		
+	}
+	
 	for(int i = 0; i < max_players; i++)
 	{
 		
@@ -154,6 +175,7 @@ int main(int argc, char *argv[]) {
                 // find the first empty position in the array
 				if (clientSockets[i] == 0) {
                     clientSockets[i] = clientSocket;
+					numberOfConnectedPlayers++;
                     printf("Added new client to clientSockets[%d] = %d\n", i, clientSocket);
 					break;
                 }
@@ -173,7 +195,38 @@ int main(int argc, char *argv[]) {
                     // The client disconnected
                     close(clientSocket);
 					toldPlayerSeed[findSocketIndex(clientSocket, clientSockets)] = false;
+					numberOfConnectedPlayers--;
                     clientSockets[i] = 0;
+					
+					if(i == 0)
+					{
+						
+						for(int k = 0; k < player1.size(); k++){ player1[k] = 'n'; }
+						player1[16] = '|';
+						
+					}
+					else if(i == 1)
+					{
+						
+						for(int k = 0; k < player2.size(); k++){ player2[k] = 'n'; }
+						player2[16] = '|';
+						
+					}
+					else if(i == 2)
+					{
+						
+						for(int k = 0; k < player3.size(); k++){ player3[k] = 'n'; }
+						player3[16] = '|';
+						
+					}
+					else
+					{
+						
+						for(int k = 0; k < player4.size(); k++){ player4[k] = 'n'; }
+						player4[16] = '|';
+						
+					}
+					
                 } else {
 					printf("Received message from Client %d: \"%s\"\n", clientSocket, buffer);
 					
@@ -195,6 +248,7 @@ int main(int argc, char *argv[]) {
 							send(clientSocket, buffer, strlen(buffer), 0);
 						}
 					}
+					/*
 					else //repeating game loop, basically just movement
 					{
 						// ESSENTIAL SO SELECT() DOESN'T BLOCK
@@ -202,6 +256,215 @@ int main(int argc, char *argv[]) {
 						// i dont think the client ever does anything with this
 						// BUT IT IS EXPERIMENTALLY NECESSARY
 					}
+					*/
+					
+					int index =  findSocketIndex(clientSocket, clientSockets);
+					
+					if(index == 0)
+					{
+						
+						for(int j = 0; j < player1.size(); j++)
+						{
+							
+							player1[j] = buffer[j];
+							
+						}
+						
+					}
+					else if(index == 1)
+					{
+						
+						for(int j = 0; j < player2.size(); j++)
+						{
+							
+							player2[j] = buffer[j];
+							
+						}
+						
+					}
+					else if(index == 2)
+					{
+						
+						for(int j = 0; j < player3.size(); j++)
+						{
+							
+							player3[j] = buffer[j];
+							
+						}
+						
+					}
+					else if(index == 3)
+					{
+						
+						for(int j = 0; j < player4.size(); j++)
+						{
+							
+							player4[j] = buffer[j];
+							
+						}
+						
+					}
+					else
+					{
+						printf("/nSocket does not exist in server's list");
+					}
+					
+					char numConPlayersStr[1];
+					int check = sprintf(numConPlayersStr, "%d", numberOfConnectedPlayers - 1);
+					
+					buffer[33] = '|';
+					buffer[34] = numConPlayersStr[1];
+					buffer[35] = '|';
+					
+					if(index == 0) //we are player1
+					{
+					
+						int incTemp = 0;
+					
+						for(int j = 36; j < 36 + player2.size(); j++)
+						{
+							
+							buffer[j] = player2[incTemp];
+							incTemp++;
+							
+						}
+						
+						incTemp = 0;
+						buffer[69] = '|';
+						
+						for(int j = 70; j < 70 + player3.size(); j++)
+						{
+							
+							buffer[j] = player3[incTemp];
+							incTemp++;
+							
+						}
+						
+						incTemp = 0;
+						buffer[103] = '|';
+						
+						for(int j = 104; j < 104 + player4.size(); j++)
+						{
+							
+							buffer[j] = player4[incTemp];
+							incTemp++;
+							
+						}
+												
+					}
+					else if(index == 1) //we are player2
+					{
+					
+						int incTemp = 0;
+					
+						for(int j = 36; j < 36 + player1.size(); j++)
+						{
+							
+							buffer[j] = player1[incTemp];
+							incTemp++;
+							
+						}
+						
+						incTemp = 0;
+						buffer[69] = '|';
+						
+						for(int j = 70; j < 70 + player3.size(); j++)
+						{
+							
+							buffer[j] = player3[incTemp];
+							incTemp++;
+							
+						}
+						
+						incTemp = 0;
+						buffer[103] = '|';
+						
+						for(int j = 104; j < 104 + player4.size(); j++)
+						{
+							
+							buffer[j] = player4[incTemp];
+							incTemp++;
+							
+						}
+												
+					}
+					else if(index == 2) //we are player3
+					{
+					
+						int incTemp = 0;
+					
+						for(int j = 36; j < 36 + player2.size(); j++)
+						{
+							
+							buffer[j] = player2[incTemp];
+							incTemp++;
+							
+						}
+						
+						incTemp = 0;
+						buffer[69] = '|';
+						
+						for(int j = 70; j < 70 + player1.size(); j++)
+						{
+							
+							buffer[j] = player1[incTemp];
+							incTemp++;
+							
+						}
+						
+						incTemp = 0;
+						buffer[103] = '|';
+						
+						for(int j = 104; j < 104 + player4.size(); j++)
+						{
+							
+							buffer[j] = player4[incTemp];
+							incTemp++;
+							
+						}
+												
+					}
+					else if(index == 0) //we are player4
+					{
+					
+						int incTemp = 0;
+					
+						for(int j = 36; j < 36 + player2.size(); j++)
+						{
+							
+							buffer[j] = player2[incTemp];
+							incTemp++;
+							
+						}
+						
+						incTemp = 0;
+						buffer[69] = '|';
+						
+						for(int j = 70; j < 70 + player3.size(); j++)
+						{
+							
+							buffer[j] = player3[incTemp];
+							incTemp++;
+							
+						}
+						
+						incTemp = 0;
+						buffer[103] = '|';
+						
+						for(int j = 104; j < 104 + player1.size(); j++)
+						{
+							
+							buffer[j] = player1[incTemp];
+							incTemp++;
+							
+						}
+												
+					}
+					else //ran out of players to be, something went wrong
+					{
+						printf("Something went terribly wrong, we don't have a player for that player index value");
+					}
+					
 					send(clientSocket, buffer, strlen(buffer), 0);
                 }
             }

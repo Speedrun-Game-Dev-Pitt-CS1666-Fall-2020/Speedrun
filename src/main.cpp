@@ -55,6 +55,7 @@ void runCredits();
 void runGame();
 void runMenu();
 Player* generateTerrain();
+void drawOtherPlayers(float, float, float, float, int, int, int);
 SDL_Texture *loadTexture(std::string);
 
 Image *loadImage(const char *src, int w, int h)
@@ -740,50 +741,91 @@ void runGame(bool multiplayer)
 			}
 		}
 		user->detectCollisions(blocks);
-		
+
 		float mX = 0;
 		float mY = 0;
 
-		if(multiplayer == true)
-		{
+		if(multiplayer == true){
+
 			bzero(buffer, 256);
 			int n = read(clientSocket, buffer, 255);
 
 			if (n < 0) {
 				herror("ERROR reading from socket");
 			}
-			else
-			{
+			else {
+				int playerCount;
+				int currPlayer = 1;
+				int hitMarks = 0;
 				int currentMark = -1;
 				int incX = 0;
 				int incY = 0;
+				int index = 0;
 				char buffX[16];
-				char buffY[16];
+				char buffY[16];	
 
-				for(int i = 0; i < 17; i++)
+				while(hitMarks < 3)
+				{
+					if(hitMarks == 2)
+					{
+						playerCount = buffer[index];
+					}
+
+					if(buffer[index] == '|')
+					{
+						hitMarks++;
+					}
+
+					index++;
+				}
+
+				hitMarks = 0;
+
+				for(index; index < sizeof(buffer); index++)
 				{
 
-					if(buffer[i] == '|')
+					if(buffer[index] == '|')
 					{
-						currentMark = i;
+						currentMark = index;
+						hitMarks++;
+
+						if(hitMarks % 2 == 0)
+						{
+							incX = 0;
+							incY = 0;
+
+							mX = strtof(buffX, NULL);
+							mY = strtof(buffY, NULL);
+							drawOtherPlayers(mX, mY, user->x_pos, user->y_screenPos, currPlayer, user->width, user->height);
+
+							currPlayer++;
+
+							if(currPlayer > playerCount)
+							{
+								break;
+							}
+						}
+					}
+					else if(buffer[index] == 'n')
+					{
+						std::cout << "player " << currPlayer << "is disconnected";
 					}
 					else if(currentMark == -1)
 					{
-						buffX[incX] = buffer[i];
+						buffX[incX] = buffer[index];
 						incX++;
 					}
 					else if(currentMark != -1)
 					{
-						buffY[incY] = buffer[i];
+						buffY[incY] = buffer[index];
 						incY++;
 					}
-
+				
 				}
-
-				mX = strtof(buffX, NULL);
-				mY = strtof(buffY, NULL);
+		
 			}
 		}
+
 		// Player box
 
 		if(multiplayer == true)
@@ -796,6 +838,51 @@ void runGame(bool multiplayer)
 		SDL_RenderPresent(screen->renderer);
 	}
 }
+
+void drawOtherPlayers(float xPos, float yPos, float p1X, float p1Y, int playerNum, int w, int h)
+{
+
+	bool inXBounds = false;
+	bool inYBounds = false;
+	//720 x 1280
+	if(p1X > xPos)
+	{
+		if(p1X - xPos < (SCREEN_WIDTH/2))
+		{
+			inXBounds = true;
+		}
+	}
+	else
+	{
+		if(p1X - xPos < (SCREEN_WIDTH/2))
+		{
+			inXBounds = true;
+		}
+	}
+
+	if(p1Y > yPos)
+	{
+		if(p1Y - yPos < (SCREEN_HEIGHT/2))
+		{
+			inYBounds = true;
+		}
+	}
+	else
+	{
+		if(p1Y - yPos < (SCREEN_HEIGHT/2))
+		{
+			inYBounds = true;
+		}
+	}
+
+	if(inXBounds && inYBounds)
+	{
+		std::string spriteName = "../res/Guy" + playerNum + std::string(".png");
+		SDL_Rect player = {xPos, yPos, w, h};
+		SDL_RenderCopy(screen->renderer, loadTexture((spriteName)), NULL, &player);
+		SDL_RenderPresent(screen->renderer);
+	}
+}	
 
 void error(const char *msg)
 {
