@@ -1,4 +1,5 @@
 #include "Block.h"
+
 #include <cmath>
 #include <iostream>
 #include <stdlib.h>
@@ -27,4 +28,5 @@ Block::Block(SDL_Rect r, int b) : block_rect{r}, block_type{b}
         green = 255;
         blue = 130;
     }
+
 }
