@@ -7,9 +7,33 @@
 #include <netinet/in.h>
 #include <errno.h>
 
+
 void error(const char *msg) {
 	perror(msg);
 	exit(1);
+}
+
+
+static const int max_players = 4;
+
+int findSocketIndex(int socket, int socketArray[max_players])
+{
+	
+	int index = -1;
+	
+	for(int i = 0; i < max_players; i++)
+	{
+		
+		if(socket == socketArray[i])
+		{
+			index = i;
+			break;
+		}
+		
+	}
+	
+	return index;
+	
 }
 
 int main(int argc, char *argv[]) {
@@ -27,7 +51,6 @@ int main(int argc, char *argv[]) {
 	fd_set socketReadSet; // look at select() manpage to learn about the sets
 
 	// Clients' stuff:
-	const int max_players = 4;
 	int clientSockets[max_players]; // all of our connected clients
 	int clientSocket; // we will fill this with the current client we're talking to
 
@@ -38,6 +61,7 @@ int main(int argc, char *argv[]) {
 		error("Error creating socket...");
 	}
 
+
 	// set server socket to allow for multiple connections
 	int option = 1;
     if (setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, (char*) &option, sizeof(option)) < 0) {
@@ -45,14 +69,18 @@ int main(int argc, char *argv[]) {
     }
 
 	// Create our server and client address object
+
 	struct sockaddr_in serverAddress;
 	struct sockaddr_in clientAddress;
 	bzero((char*) &serverAddress, sizeof(serverAddress));
 	bzero((char*) &clientAddress, sizeof(clientAddress));
+
 	socklen_t clientLength = sizeof(clientAddress);
+	
 	// again, the client variables will be used for the current client
 
 	// Populate our server address object
+
 	serverAddress.sin_family = AF_INET;
 	serverAddress.sin_addr.s_addr = INADDR_ANY;
 	serverAddress.sin_port = htons(portNum);
@@ -61,6 +89,7 @@ int main(int argc, char *argv[]) {
 	if (bind(serverSocket, (struct sockaddr*) &serverAddress, sizeof(serverAddress)) < 0) {
 		error("Error while binding...");
 	}
+
 
 	// initialize all client sockets to 0 (no connection! - remember, sockets are just ints)
     for (int i = 0; i < max_players; i++) {
@@ -71,6 +100,21 @@ int main(int argc, char *argv[]) {
 	if (listen(serverSocket, 5) < 0) {
 		error("Error trying to listen...");
     }
+	
+	char player1[33];
+	char player2[33];
+	char player3[33];
+	char player4[33];
+	bool toldPlayerSeed[max_players];
+	
+	for(int i = 0; i < max_players; i++)
+	{
+		
+		toldPlayerSeed[i] = false;
+		
+	}
+	
+	int seed = -1;
 	
 	while (true) {
 		// start off each iteration with our read set = {Server}
@@ -119,24 +163,46 @@ int main(int argc, char *argv[]) {
         // Find the socket there was activity on
         for (int i = 0; i < max_players; i++) {
             clientSocket = clientSockets[i];
-			int value;
              
             if (FD_ISSET(clientSocket, &socketReadSet)) {
 				// let's read in what the client wrote to us
 				bzero(buffer, 256);
-				value = read(clientSocket, buffer, 255);
+				int value = read(clientSocket, buffer, 255);
 
                 if (value == 0) {
                     // The client disconnected
                     close(clientSocket);
+					toldPlayerSeed[findSocketIndex(clientSocket, clientSockets)] = false;
                     clientSockets[i] = 0;
                 } else {
 					printf("Received message from Client %d: \"%s\"\n", clientSocket, buffer);
-
-                    // ESSENTIAL SO SELECT() DOESN'T BLOCK
+					
+					int currentIndex = findSocketIndex(clientSocket, clientSockets);
+					if(toldPlayerSeed[currentIndex] == false) //setup, basically just passing the seed around
+					{
+						toldPlayerSeed[currentIndex] = true;
+						if(seed == -1)
+						{
+							seed = atoi(buffer);
+							bzero(buffer, 256);
+							int lS = sprintf(buffer, "%i", seed);
+							send(clientSocket, buffer, strlen(buffer), 0);
+						}
+						else
+						{
+							bzero(buffer, 256);
+							int lS = sprintf(buffer, "%i", seed);
+							send(clientSocket, buffer, strlen(buffer), 0);
+						}
+					}
+					else //repeating game loop, basically just movement
+					{
+						// ESSENTIAL SO SELECT() DOESN'T BLOCK
+						send(clientSocket, buffer, strlen(buffer), 0);
+						// i dont think the client ever does anything with this
+						// BUT IT IS EXPERIMENTALLY NECESSARY
+					}
 					send(clientSocket, buffer, strlen(buffer), 0);
-					// i dont think the client ever does anything with this
-					// BUT IT IS EXPERIMENTALLY NECESSARY
                 }
             }
         }
@@ -144,5 +210,6 @@ int main(int argc, char *argv[]) {
 
 	// NOTE: Since there is a max of 4 players, if more than 4 try to join, they will be blocked indefinitely (even if a client disconnects to make room)
 	close(serverSocket);
+
 	return 0; 
 }
