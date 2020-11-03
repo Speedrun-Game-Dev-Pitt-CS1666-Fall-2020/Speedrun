@@ -268,9 +268,9 @@ Player* generateTerrain()
 			if (cave_area[y/BOX_WIDTH][x/BOX_WIDTH] && b)
 			{
 				SDL_Rect block = {0, y, BOX_WIDTH * (x / BOX_WIDTH), BOX_HEIGHT};
-				//Block* bubby = new Block(block, 0); //normal block
+				Block* bubby = new Block(block, 0); //normal block
 				//Block* bubby = new Block(block, 1); //icy block
-				Block* bubby = new Block(block, 2); //bouncy block
+				//Block* bubby = new Block(block, 2); //bouncy block
 				blocks.push_back(*bubby);
 				//blocks.push_back(block);
 				b = false;
@@ -287,9 +287,9 @@ Player* generateTerrain()
 			if (!cave_area[y/BOX_WIDTH][x/BOX_WIDTH] && !b)
 			{
 				SDL_Rect block = {x, y, BOX_WIDTH *100, BOX_HEIGHT};
-				//Block* bubby = new Block(block, 0); //normal block
+				Block* bubby = new Block(block, 0); //normal block
 				//Block* bubby = new Block(block, 1); //icy block
-				Block* bubby = new Block(block, 2); //bouncy block
+				//Block* bubby = new Block(block, 2); //bouncy block
 				blocks.push_back(*bubby);
 				//blocks.push_back(block);
 				break;
@@ -297,9 +297,9 @@ Player* generateTerrain()
 			else if (x == SCREEN_WIDTH - BOX_WIDTH)
 			{
 				SDL_Rect block = {x, y, BOX_WIDTH *100, BOX_HEIGHT};
-				//Block* bubby = new Block(block, 0); //normal block
+				Block* bubby = new Block(block, 0); //normal block
 				//Block* bubby = new Block(block, 1); //icy block
-				Block* bubby = new Block(block, 2); //bouncy block
+				//Block* bubby = new Block(block, 2); //bouncy block
 				blocks.push_back(*bubby);
 				//blocks.push_back(block);
 				break;
@@ -467,9 +467,9 @@ Player* generateTerrainSeed(int seed)
 			if (cave_area[y/BOX_WIDTH][x/BOX_WIDTH] && b)
 			{
 				SDL_Rect block = {0, y, BOX_WIDTH * (x / BOX_WIDTH), BOX_HEIGHT};
-				//Block* bubby = new Block(block, 0); //normal block
+				Block* bubby = new Block(block, 0); //normal block
 				//Block* bubby = new Block(block, 1); //icy block
-				Block* bubby = new Block(block, 2); //bouncy block
+				//Block* bubby = new Block(block, 2); //bouncy block
 				blocks.push_back(*bubby);
 				//blocks.push_back(block);
 				b = false;
@@ -486,9 +486,9 @@ Player* generateTerrainSeed(int seed)
 			if (!cave_area[y/BOX_WIDTH][x/BOX_WIDTH] && !b)
 			{
 				SDL_Rect block = {x, y, BOX_WIDTH *100, BOX_HEIGHT};
-				//Block* bubby = new Block(block, 0); //normal block
+				Block* bubby = new Block(block, 0); //normal block
 				//Block* bubby = new Block(block, 1); //icy block
-				Block* bubby = new Block(block, 2); //bouncy block
+				//Block* bubby = new Block(block, 2); //bouncy block
 				blocks.push_back(*bubby);
 				//blocks.push_back(block);
 				break;
@@ -496,9 +496,9 @@ Player* generateTerrainSeed(int seed)
 			else if (x == SCREEN_WIDTH - BOX_WIDTH)
 			{
 				SDL_Rect block = {x, y, BOX_WIDTH *100, BOX_HEIGHT};
-				//Block* bubby = new Block(block, 0); //normal block
+				Block* bubby = new Block(block, 0); //normal block
 				//Block* bubby = new Block(block, 1); //icy block
-				Block* bubby = new Block(block, 2); //bouncy block
+				//Block* bubby = new Block(block, 2); //bouncy block
 				blocks.push_back(*bubby);
 				//blocks.push_back(block);
 				break;
@@ -646,45 +646,45 @@ void runGame(bool multiplayer)
 		user->applyForces();
 
 		//get intended motion based off input
-		while (SDL_PollEvent(&e))
+		SDL_PollEvent(&e);
+
+		const Uint8 *keystate = SDL_GetKeyboardState(nullptr);
+		if (e.type == SDL_QUIT || keystate[SDL_SCANCODE_ESCAPE])
 		{
-			const Uint8 *keystate = SDL_GetKeyboardState(nullptr);
-			if (e.type == SDL_QUIT || keystate[SDL_SCANCODE_ESCAPE])
-			{
-				gameon = false;
-			}
-			else
-			{
+			gameon = false;
+		}
+		else
+		{
 
-				if(keystate[SDL_SCANCODE_W]){
+			if(keystate[SDL_SCANCODE_W]){
 
-					if (!user->cantJump)
-					{
-						user->y_vel += -15;
-						user->cantJump = true;
-					}
-
-				}
-				if(keystate[SDL_SCANCODE_A]){
-					user->x_accel = -1;
-					// if(user->x_vel > -4){
-					// 	user->x_vel += -2;
-					// }
-				}
-				if(keystate[SDL_SCANCODE_D]){
-					user->x_accel = 1;
-					// if(user->x_vel < 4){
-					// 	user->x_vel += 2;
-					// }
-				}
-				if(keystate[SDL_SCANCODE_S]){
-
-				}
-
-				if (!keystate[SDL_SCANCODE_A] && !keystate[SDL_SCANCODE_D])
+				if (!user->cantJump)
 				{
-					user->x_accel = 0;
+					user->y_vel += -15;
+					user->cantJump = true;
 				}
+
+			}
+
+			if(keystate[SDL_SCANCODE_A]){
+				user->x_accel = -1;
+				// if(user->x_vel > -4){
+				// 	user->x_vel += -2;
+				// }
+			}
+			if(keystate[SDL_SCANCODE_D]){
+				user->x_accel = 1;
+				// if(user->x_vel < 4){
+				// 	user->x_vel += 2;
+				// }
+			}
+			if(keystate[SDL_SCANCODE_S]){
+
+			}
+
+			if (!keystate[SDL_SCANCODE_A] && !keystate[SDL_SCANCODE_D])
+			{
+				user->x_accel = 0;
 			}
 		}
 
