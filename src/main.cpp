@@ -22,6 +22,7 @@
 #include "Screen.h"
 #include "Image.h"
 #include "Player.h"
+#include "Block.h"
 #include "MenuStateMachine.hpp"
 
 #define CREDIT_SIZE 10

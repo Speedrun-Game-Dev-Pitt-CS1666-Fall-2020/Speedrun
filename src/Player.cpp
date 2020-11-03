@@ -84,17 +84,17 @@ void Player::detectCollisions(std::vector <SDL_Rect> r)
 
     //go thru all possible collision things and checkCollision/apply force
     //for colliding with bottom of screen
-    if (y_pos >= 3000 - height)
-    {
-        y_pos = 3000 - height;
-        //y_vel = 0;
-        //y_accel = 0;
-        if (y_vel > 0)
-        {
-            y_vel = 0;
-        }
-        cantJump = false;
-    }
+    // if (y_pos >= 3000 - height)
+    // {
+    //     y_pos = 3000 - height;
+    //     //y_vel = 0;
+    //     //y_accel = 0;
+    //     if (y_vel > 0)
+    //     {
+    //         y_vel = 0;
+    //     }
+    //     cantJump = false;
+    // }
 
     //make friction .3 which gets updated if hit frictionless block to less
     friction = 0.3;
