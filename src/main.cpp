@@ -765,7 +765,6 @@ void runGame(bool multiplayer)
 			}
 		}
 		user->detectCollisions(blocks);
-		user->y_screenPos = user->y_pos;
 		float mX = 0;
 		float mY = 0;
 
