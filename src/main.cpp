@@ -25,6 +25,8 @@
 #include "Block.h"
 #include "MenuStateMachine.hpp"
 
+#include "Block.h"
+
 #define CREDIT_SIZE 10
 #define MENU_SIZE 3
 
@@ -44,7 +46,7 @@ Uint32 before;
 Uint32 then;
 Uint32 delta;
 Uint32 now;
-std::vector <SDL_Rect> blocks;	//stores collidable blocks
+std::vector <Block> blocks;	//stores collidable blocks
 std::vector <SDL_Rect> decorative_blocks;	//stores non-collidable blocks
 int clientSocket;	//Socket for connecting to the server
 
@@ -158,9 +160,9 @@ Player* generateTerrain()
 	int cave_nums_index = 0;
 	
 	//"gaps" define where the caverns will be placed
-	int gap1 = (rand() % 20) + 20;
-	int gap2 = (rand() % 20) + 70;
-	int gap3 = (rand() % 20) + 120;
+	int gap1 = (rand() % 20) + 100;
+	int gap2 = (rand() % 20) + 200;
+	int gap3 = (rand() % 20) + 300;
 
 	//for each block on the screen
 	for (int y = 0; y < WORLD_HEIGHT; y = y + BOX_HEIGHT)
@@ -255,10 +257,14 @@ Player* generateTerrain()
 		
 		cave_nums_index++;
 	}
-
+	
+	int block_type = rand() % 3;
+	
 	//use our cave_area array to determine where to render blocks
 	for (int y = 0; y < WORLD_HEIGHT; y = y + BOX_HEIGHT)
 	{
+		if (y % 1000 == 0)
+			block_type = rand() % 3;
 
 		bool b = true;
 		for (int x = 0; x < SCREEN_WIDTH; x = x + BOX_WIDTH)
@@ -267,7 +273,11 @@ Player* generateTerrain()
 			if (cave_area[y/BOX_WIDTH][x/BOX_WIDTH] && b)
 			{
 				SDL_Rect block = {0, y, BOX_WIDTH * (x / BOX_WIDTH), BOX_HEIGHT};
-				blocks.push_back(block);
+				Block* bubby = new Block(block, block_type); //normal block
+				//Block* bubby = new Block(block, 1); //icy block
+				//Block* bubby = new Block(block, 2); //bouncy block
+				blocks.push_back(*bubby);
+				//blocks.push_back(block);
 				b = false;
 
 				//spawn the player in at the first available "free" block
@@ -282,19 +292,31 @@ Player* generateTerrain()
 			if (!cave_area[y/BOX_WIDTH][x/BOX_WIDTH] && !b)
 			{
 				SDL_Rect block = {x, y, BOX_WIDTH *100, BOX_HEIGHT};
-				blocks.push_back(block);
+				Block* bubby = new Block(block, block_type); //normal block
+				//Block* bubby = new Block(block, 1); //icy block
+				//Block* bubby = new Block(block, 2); //bouncy block
+				blocks.push_back(*bubby);
+				//blocks.push_back(block);
 				break;
 			}
 			else if (x == SCREEN_WIDTH - BOX_WIDTH)
 			{
 				SDL_Rect block = {x, y, BOX_WIDTH *100, BOX_HEIGHT};
-				blocks.push_back(block);
+				Block* bubby = new Block(block, block_type); //normal block
+				//Block* bubby = new Block(block, 1); //icy block
+				//Block* bubby = new Block(block, 2); //bouncy block
+				blocks.push_back(*bubby);
+				//blocks.push_back(block);
 				break;
 			}
 		}
 
 
 	}
+
+	SDL_Rect final_block = {0, WORLD_HEIGHT, BOX_WIDTH *100, BOX_HEIGHT};
+	Block* bubby = new Block(final_block, 3);
+	blocks.push_back(*bubby);
 	
 	return user;
 }
@@ -454,7 +476,11 @@ Player* generateTerrainSeed(int seed)
 			if (cave_area[y/BOX_WIDTH][x/BOX_WIDTH] && b)
 			{
 				SDL_Rect block = {0, y, BOX_WIDTH * (x / BOX_WIDTH), BOX_HEIGHT};
-				blocks.push_back(block);
+				Block* bubby = new Block(block, 0); //normal block
+				//Block* bubby = new Block(block, 1); //icy block
+				//Block* bubby = new Block(block, 2); //bouncy block
+				blocks.push_back(*bubby);
+				//blocks.push_back(block);
 				b = false;
 
 				//spawn the player in at the first available "free" block
@@ -469,13 +495,21 @@ Player* generateTerrainSeed(int seed)
 			if (!cave_area[y/BOX_WIDTH][x/BOX_WIDTH] && !b)
 			{
 				SDL_Rect block = {x, y, BOX_WIDTH *100, BOX_HEIGHT};
-				blocks.push_back(block);
+				Block* bubby = new Block(block, 0); //normal block
+				//Block* bubby = new Block(block, 1); //icy block
+				//Block* bubby = new Block(block, 2); //bouncy block
+				blocks.push_back(*bubby);
+				//blocks.push_back(block);
 				break;
 			}
 			else if (x == SCREEN_WIDTH - BOX_WIDTH)
 			{
 				SDL_Rect block = {x, y, BOX_WIDTH *100, BOX_HEIGHT};
-				blocks.push_back(block);
+				Block* bubby = new Block(block, 0); //normal block
+				//Block* bubby = new Block(block, 1); //icy block
+				//Block* bubby = new Block(block, 2); //bouncy block
+				blocks.push_back(*bubby);
+				//blocks.push_back(block);
 				break;
 			}
 		}
@@ -621,45 +655,45 @@ void runGame(bool multiplayer)
 		user->applyForces();
 
 		//get intended motion based off input
-		while (SDL_PollEvent(&e))
+		SDL_PollEvent(&e);
+
+		const Uint8 *keystate = SDL_GetKeyboardState(nullptr);
+		if (e.type == SDL_QUIT || keystate[SDL_SCANCODE_ESCAPE])
 		{
-			const Uint8 *keystate = SDL_GetKeyboardState(nullptr);
-			if (e.type == SDL_QUIT || keystate[SDL_SCANCODE_ESCAPE])
-			{
-				gameon = false;
-			}
-			else
-			{
+			gameon = false;
+		}
+		else
+		{
 
-				if(keystate[SDL_SCANCODE_W]){
+			if(keystate[SDL_SCANCODE_W]){
 
-					if (!user->cantJump)
-					{
-						user->y_vel += -15;
-						user->cantJump = true;
-					}
-
-				}
-				if(keystate[SDL_SCANCODE_A]){
-					user->x_accel = -1;
-					// if(user->x_vel > -4){
-					// 	user->x_vel += -2;
-					// }
-				}
-				if(keystate[SDL_SCANCODE_D]){
-					user->x_accel = 1;
-					// if(user->x_vel < 4){
-					// 	user->x_vel += 2;
-					// }
-				}
-				if(keystate[SDL_SCANCODE_S]){
-
-				}
-
-				if (!keystate[SDL_SCANCODE_A] && !keystate[SDL_SCANCODE_D])
+				if (!user->cantJump)
 				{
-					user->x_accel = 0;
+					user->y_vel += -15;
+					user->cantJump = true;
 				}
+
+			}
+
+			if(keystate[SDL_SCANCODE_A]){
+				user->x_accel = -1;
+				// if(user->x_vel > -4){
+				// 	user->x_vel += -2;
+				// }
+			}
+			if(keystate[SDL_SCANCODE_D]){
+				user->x_accel = 1;
+				// if(user->x_vel < 4){
+				// 	user->x_vel += 2;
+				// }
+			}
+			if(keystate[SDL_SCANCODE_S]){
+
+			}
+
+			if (!keystate[SDL_SCANCODE_A] && !keystate[SDL_SCANCODE_D])
+			{
+				user->x_accel = 0;
 			}
 		}
 
@@ -722,22 +756,25 @@ void runGame(bool multiplayer)
 		SDL_RenderClear(screen->renderer);
 
 		// Draw boxes
-		SDL_SetRenderDrawColor(screen->renderer, 0xFF, 0x00, 0x00, 0xFF);
+		//SDL_SetRenderDrawColor(screen->renderer, 0xFF, 0x00, 0x00, 0xFF);
 		
 		if(user->y_screenPos < 720/3 )
 		{
 			user->y_screenPos += user->y_vel;//problem on start
 			for (auto b: blocks)
 			{
-				SDL_RenderFillRect(screen->renderer, &b);
+				// Draw boxes
+				SDL_SetRenderDrawColor(screen->renderer, b.red, b.green, b.blue, 0xFF);
+				SDL_RenderFillRect(screen->renderer, &(b.block_rect));
 			}
 		}
 		else
 		{
 			for (auto b: blocks)
 			{
-				b.y -= (user->y_pos-user->y_screenPos);
-				SDL_RenderFillRect(screen->renderer, &b);
+				b.block_rect.y -= (user->y_pos-user->y_screenPos);
+				SDL_SetRenderDrawColor(screen->renderer, b.red, b.green, b.blue, 0xFF);
+				SDL_RenderFillRect(screen->renderer, &(b.block_rect));
 			}
 		}
 		user->detectCollisions(blocks);
