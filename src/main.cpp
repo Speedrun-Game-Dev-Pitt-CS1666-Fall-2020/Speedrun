@@ -781,7 +781,7 @@ void runGame(bool multiplayer)
 
 				hitMarks = 0;
 
-				for(index; index < sizeof(buffer); index++)
+				for(index; index < buffer.size(); index++)
 				{
 
 					if(buffer[index] == '|')
