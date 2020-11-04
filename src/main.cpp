@@ -55,7 +55,7 @@ void runCredits();
 void runGame();
 void runMenu();
 Player* generateTerrain();
-void drawOtherPlayers(float, float, float, float, int, int, int);
+void drawOtherPlayers(Player*, float, float, int);
 SDL_Texture *loadTexture(std::string);
 
 Image *loadImage(const char *src, int w, int h)
@@ -683,6 +683,8 @@ void runGame(bool multiplayer)
 			char yBuff[16];
 			int lY = sprintf(yBuff, "%.5f", user->y_pos);
 
+			std::cout << "Hello! My positions is " << user->x_pos << ", " << user->y_pos << std::endl;
+
 			bzero(buffer, 256);
 
 			int incX = 0;
@@ -755,7 +757,7 @@ void runGame(bool multiplayer)
 			}
 			else {
 				int playerCount;
-				int currPlayer = 1;
+				int currPlayer = 2;
 				int hitMarks = 0;
 				int currentMark = -1;
 				int incX = 0;
@@ -768,7 +770,9 @@ void runGame(bool multiplayer)
 				{
 					if(hitMarks == 2)
 					{
-						playerCount = buffer[index];
+						char playerCountTemp[2];
+						playerCountTemp[1] = buffer[index];
+						playerCount = atoi(playerCountTemp) + 1;
 					}
 
 					if(buffer[index] == '|')
@@ -780,8 +784,8 @@ void runGame(bool multiplayer)
 				}
 
 				hitMarks = 0;
-
-				for(index; index < buffer.size(); index++)
+				
+				for(index; index < (unsigned)strlen(buffer); index++)
 				{
 
 					if(buffer[index] == '|')
@@ -796,19 +800,21 @@ void runGame(bool multiplayer)
 
 							mX = strtof(buffX, NULL);
 							mY = strtof(buffY, NULL);
-							drawOtherPlayers(mX, mY, user->x_pos, user->y_screenPos, currPlayer, user->width, user->height);
+							drawOtherPlayers(user, mX, mY, currPlayer);
 
 							currPlayer++;
 
-							if(currPlayer > playerCount)
+							/* Taking this out draws player 3 but keeps him attached to player 2's X and shifted below in Y
+							if(currPlayer > playerCount) // 3
 							{
 								break;
 							}
+							*/
 						}
 					}
 					else if(buffer[index] == 'n')
 					{
-						std::cout << "player " << currPlayer << "is disconnected";
+						std::cout << "player " << currPlayer << "is disconnected" << std::endl;
 					}
 					else if(currentMark == -1)
 					{
@@ -839,49 +845,15 @@ void runGame(bool multiplayer)
 	}
 }
 
-void drawOtherPlayers(float xPos, float yPos, float p1X, float p1Y, int playerNum, int w, int h)
+void drawOtherPlayers(Player* thisPlayer, float otherPlayerOriginX, float otherPlayerOriginY, int playerNum)
 {
-
-	bool inXBounds = false;
-	bool inYBounds = false;
-	//720 x 1280
-	if(p1X > xPos)
-	{
-		if(p1X - xPos < (SCREEN_WIDTH/2))
-		{
-			inXBounds = true;
-		}
-	}
-	else
-	{
-		if(p1X - xPos < (SCREEN_WIDTH/2))
-		{
-			inXBounds = true;
-		}
-	}
-
-	if(p1Y > yPos)
-	{
-		if(p1Y - yPos < (SCREEN_HEIGHT/2))
-		{
-			inYBounds = true;
-		}
-	}
-	else
-	{
-		if(p1Y - yPos < (SCREEN_HEIGHT/2))
-		{
-			inYBounds = true;
-		}
-	}
-
-	if(inXBounds && inYBounds)
-	{
-		std::string spriteName = "../res/Guy" + playerNum + std::string(".png");
-		SDL_Rect player = {xPos, yPos, w, h};
-		SDL_RenderCopy(screen->renderer, loadTexture((spriteName)), NULL, &player);
-		SDL_RenderPresent(screen->renderer);
-	}
+	float otherPlayerScreenY = thisPlayer->y_screenPos - (thisPlayer->y_pos - otherPlayerOriginY); 
+	
+	std::string spriteName = "../res/Guy" + std::to_string(playerNum) + std::string(".png");
+	SDL_Rect player = {otherPlayerOriginX, otherPlayerScreenY, thisPlayer->width, thisPlayer->height};
+	std::cout << "Placing player " << playerNum << " at " << otherPlayerOriginX << ", " << otherPlayerScreenY << std::endl;
+	SDL_RenderCopy(screen->renderer, loadTexture((spriteName)), NULL, &player);
+	SDL_RenderPresent(screen->renderer);
 }	
 
 void error(const char *msg)
