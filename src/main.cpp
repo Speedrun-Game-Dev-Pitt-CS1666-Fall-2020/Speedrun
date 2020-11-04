@@ -635,12 +635,6 @@ void runGame(bool multiplayer)
 		user = generateTerrain();
 	}
 
-
-	//Define the blocks
-	/*SDL_Rect block = {SCREEN_WIDTH/2, SCREEN_HEIGHT-20, 200, 20};
-	SDL_Rect anotherBlock = {SCREEN_WIDTH/2 - 190, SCREEN_HEIGHT-120, 120, 20};
-	SDL_Rect spring = {SCREEN_WIDTH/2 - 300, SCREEN_HEIGHT-180, 100, 20};
-	blocks = {block, anotherBlock, spring};*/
 	then = 0;
 	bzero(buffer, 256);
 	SDL_Event e;
@@ -697,17 +691,7 @@ void runGame(bool multiplayer)
 				user->x_accel = 0;
 			}
 		}
-
-		// Move box
 		user->updatePosition();
-		//if user position on screen < 720/3
-			//then change user position and user position on screen, not blocks.
-		//if user position on screen is > 1440/3
-			//then change user position and user position on screeen, not blocks.
-		//else
-			//change block locations
-		//X, always change X of player and player screen pos, never block
-		
 		//check constraints and resolve conflicts
 		//apply forces based off gravity and collisions
 		
@@ -763,7 +747,7 @@ void runGame(bool multiplayer)
 		
 		if(user->y_screenPos < 720/3 )
 		{
-			user->y_screenPos += user->y_vel;//problem on start
+			user->y_screenPos = user->y_pos;
 			for (auto b: blocks)
 			{
 				// Draw boxes
@@ -781,7 +765,7 @@ void runGame(bool multiplayer)
 			}
 		}
 		user->detectCollisions(blocks);
-
+		user->y_screenPos = user->y_pos;
 		float mX = 0;
 		float mY = 0;
 
