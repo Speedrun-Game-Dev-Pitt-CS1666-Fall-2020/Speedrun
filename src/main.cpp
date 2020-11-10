@@ -47,6 +47,7 @@ Uint32 then;
 Uint32 delta;
 Uint32 now;
 std::vector <Block> blocks;	//stores collidable blocks
+std::vector <Block> optBlocks;	//stores optimized colliable blocks
 std::vector <SDL_Rect> decorative_blocks;	//stores non-collidable blocks
 int clientSocket;	//Socket for connecting to the server
 
@@ -58,6 +59,7 @@ void runCredits();
 void runGame();
 void runMenu();
 Player* generateTerrain();
+void drawOtherPlayers(Player*, float, float, int);
 SDL_Texture *loadTexture(std::string);
 
 Image *loadImage(const char *src, int w, int h)
@@ -158,7 +160,7 @@ Player* generateTerrain()
 	bool player_created = false;
 	Player *user;
 	int cave_nums_index = 0;
-	
+
 	//"gaps" define where the caverns will be placed
 	int gap1 = (rand() % 20) + 100;
 	int gap2 = (rand() % 20) + 200;
@@ -168,7 +170,7 @@ Player* generateTerrain()
 	for (int y = 0; y < WORLD_HEIGHT; y = y + BOX_HEIGHT)
 	{
 		//place cavern at current location
-		if (y / BOX_HEIGHT == gap1 || y / BOX_HEIGHT == gap2 || y / BOX_HEIGHT == gap3)		
+		if (y / BOX_HEIGHT == gap1 || y / BOX_HEIGHT == gap2 || y / BOX_HEIGHT == gap3)
 		{
 			//cavern should be 20 boxes tall
 			int cavern_end = y + 20 * BOX_HEIGHT;
@@ -182,7 +184,7 @@ Player* generateTerrain()
 					{
 						x_left = 0;
 					}
-					
+
 					int x_right = (x + BOX_WIDTH)/BOX_WIDTH;
 					if (x_right >= SCREEN_WIDTH)
 					{
@@ -214,7 +216,7 @@ Player* generateTerrain()
 			continue;
 		}
 		bool b = true;
-		
+
 		//"start" indicates the relative position of the left wall of the cave to the screen at a given elevation
 		int start = cave_nums[cave_nums_index] - 11;
 
@@ -254,12 +256,12 @@ Player* generateTerrain()
 				}
 			}
 		}
-		
+
 		cave_nums_index++;
 	}
-	
+
 	int block_type = rand() % 3;
-	
+
 	//use our cave_area array to determine where to render blocks
 	for (int y = 0; y < WORLD_HEIGHT; y = y + BOX_HEIGHT)
 	{
@@ -317,7 +319,7 @@ Player* generateTerrain()
 	SDL_Rect final_block = {0, WORLD_HEIGHT, BOX_WIDTH *100, BOX_HEIGHT};
 	Block* bubby = new Block(final_block, 3);
 	blocks.push_back(*bubby);
-	
+
 	return user;
 }
 
@@ -365,7 +367,7 @@ Player* generateTerrainSeed(int seed)
 	bool player_created = false;
 	Player *user;
 	int cave_nums_index = 0;
-	
+
 	//"gaps" define where the caverns will be placed
 	int gap1 = (rand() % 20) + 20;
 	int gap2 = (rand() % 20) + 70;
@@ -375,7 +377,7 @@ Player* generateTerrainSeed(int seed)
 	for (int y = 0; y < WORLD_HEIGHT; y = y + BOX_HEIGHT)
 	{
 		//place cavern at current location
-		if (y / BOX_HEIGHT == gap1 || y / BOX_HEIGHT == gap2 || y / BOX_HEIGHT == gap3)		
+		if (y / BOX_HEIGHT == gap1 || y / BOX_HEIGHT == gap2 || y / BOX_HEIGHT == gap3)
 		{
 			//cavern should be 20 boxes tall
 			int cavern_end = y + 20 * BOX_HEIGHT;
@@ -389,7 +391,7 @@ Player* generateTerrainSeed(int seed)
 					{
 						x_left = 0;
 					}
-					
+
 					int x_right = (x + BOX_WIDTH)/BOX_WIDTH;
 					if (x_right >= SCREEN_WIDTH)
 					{
@@ -421,7 +423,7 @@ Player* generateTerrainSeed(int seed)
 			continue;
 		}
 		bool b = true;
-		
+
 		//"start" indicates the relative position of the left wall of the cave to the screen at a given elevation
 		int start = cave_nums[cave_nums_index] - 11;
 
@@ -461,7 +463,7 @@ Player* generateTerrainSeed(int seed)
 				}
 			}
 		}
-		
+
 		cave_nums_index++;
 	}
 
@@ -516,7 +518,7 @@ Player* generateTerrainSeed(int seed)
 
 
 	}
-	
+
 	return user;
 }
 
@@ -604,7 +606,7 @@ void runGame(bool multiplayer)
 	{
 		srand(time(NULL));
 		int rand (void);
-		
+
 		bzero(buffer, 256);
 		int lR = sprintf(buffer, "%i", (rand() + 2));
 		int n = write(clientSocket, buffer, strlen(buffer));
@@ -613,11 +615,11 @@ void runGame(bool multiplayer)
 		{
 			herror("Error writing random number to server...");
 		}
-		
+
 		bzero(buffer, 256);
 		n = read(clientSocket, buffer, 255);
 
-		if (n < 0) 
+		if (n < 0)
 		{
 			herror("ERROR reading from socket");
 		}
@@ -634,12 +636,6 @@ void runGame(bool multiplayer)
 		user = generateTerrain();
 	}
 
-
-	//Define the blocks
-	/*SDL_Rect block = {SCREEN_WIDTH/2, SCREEN_HEIGHT-20, 200, 20};
-	SDL_Rect anotherBlock = {SCREEN_WIDTH/2 - 190, SCREEN_HEIGHT-120, 120, 20};
-	SDL_Rect spring = {SCREEN_WIDTH/2 - 300, SCREEN_HEIGHT-180, 100, 20};
-	blocks = {block, anotherBlock, spring};*/
 	then = 0;
 	bzero(buffer, 256);
 	SDL_Event e;
@@ -651,7 +647,7 @@ void runGame(bool multiplayer)
 		if (now - then < 16)
 			continue;
 
-		then = now;	
+		then = now;
 		user->applyForces();
 
 		//get intended motion based off input
@@ -696,26 +692,18 @@ void runGame(bool multiplayer)
 				user->x_accel = 0;
 			}
 		}
-
-		// Move box
 		user->updatePosition();
-		//if user position on screen < 720/3
-			//then change user position and user position on screen, not blocks.
-		//if user position on screen is > 1440/3
-			//then change user position and user position on screeen, not blocks.
-		//else
-			//change block locations
-		//X, always change X of player and player screen pos, never block
-		
 		//check constraints and resolve conflicts
 		//apply forces based off gravity and collisions
-		
+
 		if(multiplayer == true)
 		{
 			char xBuff[16];
 			int lX = sprintf(xBuff, "%.5f", user->x_pos);
 			char yBuff[16];
 			int lY = sprintf(yBuff, "%.5f", user->y_pos);
+
+			std::cout << "Hello! My positions is " << user->x_pos << ", " << user->y_pos << std::endl;
 
 			bzero(buffer, 256);
 
@@ -757,10 +745,10 @@ void runGame(bool multiplayer)
 
 		// Draw boxes
 		//SDL_SetRenderDrawColor(screen->renderer, 0xFF, 0x00, 0x00, 0xFF);
-		
+
 		if(user->y_screenPos < 720/3 )
 		{
-			user->y_screenPos += user->y_vel;//problem on start
+			user->y_screenPos = user->y_pos;
 			for (auto b: blocks)
 			{
 				// Draw boxes
@@ -777,62 +765,126 @@ void runGame(bool multiplayer)
 				SDL_RenderFillRect(screen->renderer, &(b.block_rect));
 			}
 		}
-		user->detectCollisions(blocks);
-		
+
+		//collision optimization, only detectcollisions for blocks within a reasonable range that the player would be in.
+		for (auto b: blocks){
+			if((sqrt(pow(b.block_rect.x - user->x_pos, 2) + pow(b.block_rect.y - user->y_pos, 2) * 1.0))<100)){
+				optBlocks.push_back(b);
+
+			}
+		}
+
+		user->detectCollisions(optBlocks);
 		float mX = 0;
 		float mY = 0;
 
-		if(multiplayer == true)
-		{
+		if(multiplayer == true){
+
 			bzero(buffer, 256);
 			int n = read(clientSocket, buffer, 255);
 
 			if (n < 0) {
 				herror("ERROR reading from socket");
 			}
-			else
-			{
+			else {
+				int playerCount;
+				int currPlayer = 2;
+				int hitMarks = 0;
 				int currentMark = -1;
 				int incX = 0;
 				int incY = 0;
+				int index = 0;
 				char buffX[16];
 				char buffY[16];
 
-				for(int i = 0; i < 17; i++)
+				while(hitMarks < 3)
+				{
+					if(hitMarks == 2)
+					{
+						char playerCountTemp[2];
+						playerCountTemp[1] = buffer[index];
+						playerCount = atoi(playerCountTemp) + 1;
+					}
+
+					if(buffer[index] == '|')
+					{
+						hitMarks++;
+					}
+
+					index++;
+				}
+
+				hitMarks = 0;
+
+				for(index; index < (unsigned)strlen(buffer); index++)
 				{
 
-					if(buffer[i] == '|')
+					if(buffer[index] == '|')
 					{
-						currentMark = i;
+						currentMark = index;
+						hitMarks++;
+
+						if(hitMarks % 2 == 0)
+						{
+							incX = 0;
+							incY = 0;
+
+							mX = strtof(buffX, NULL);
+							mY = strtof(buffY, NULL);
+							drawOtherPlayers(user, mX, mY, currPlayer);
+
+							currPlayer++;
+
+							/* Taking this out draws player 3 but keeps him attached to player 2's X and shifted below in Y
+							if(currPlayer > playerCount) // 3
+							{
+								break;
+							}
+							*/
+						}
+					}
+					else if(buffer[index] == 'n')
+					{
+						std::cout << "player " << currPlayer << "is disconnected" << std::endl;
 					}
 					else if(currentMark == -1)
 					{
-						buffX[incX] = buffer[i];
+						buffX[incX] = buffer[index];
 						incX++;
 					}
 					else if(currentMark != -1)
 					{
-						buffY[incY] = buffer[i];
+						buffY[incY] = buffer[index];
 						incY++;
 					}
 
 				}
 
-				mX = strtof(buffX, NULL);
-				mY = strtof(buffY, NULL);
 			}
 		}
+
 		// Player box
 
 		if(multiplayer == true)
 		{
 			std::cout << "Client at position: (" << mX << ", " << mY << ")" << std::endl;
 		}
-		
+
 		SDL_Rect player_rect = {user->x_pos, user->y_screenPos, user->width, user->height};
 		SDL_RenderCopy(screen->renderer, user->player_texture, NULL, &player_rect);
 		SDL_RenderPresent(screen->renderer);
 	}
+}
+
+void drawOtherPlayers(Player* thisPlayer, float otherPlayerOriginX, float otherPlayerOriginY, int playerNum)
+{
+	float otherPlayerScreenY = thisPlayer->y_screenPos - (thisPlayer->y_pos - otherPlayerOriginY);
+
+	std::string spriteName = "../res/Guy" + std::to_string(playerNum) + std::string(".png");
+	SDL_Rect player = {otherPlayerOriginX, otherPlayerScreenY, thisPlayer->width, thisPlayer->height};
+	std::cout << "Placing player " << playerNum << " at " << otherPlayerOriginX << ", " << otherPlayerScreenY << std::endl;
+	SDL_RenderCopy(screen->renderer, loadTexture((spriteName)), NULL, &player);
+	SDL_RenderPresent(screen->renderer);
 }
 
 void error(const char *msg)

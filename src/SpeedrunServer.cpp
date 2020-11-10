@@ -53,6 +53,7 @@ int main(int argc, char *argv[]) {
 	// Clients' stuff:
 	int clientSockets[max_players]; // all of our connected clients
 	int clientSocket; // we will fill this with the current client we're talking to
+	int numberOfConnectedPlayers = 0;
 
 
 	// Create our server socket
@@ -107,11 +108,28 @@ int main(int argc, char *argv[]) {
 	char player4[33];
 	bool toldPlayerSeed[max_players];
 	
+	for(int i = 0; i < 33; i++)
+	{
+		// Zero x|y to 'n'
+		if(i == 16)
+		{
+			player1[i] = '|';
+			player2[i] = '|';
+			player3[i] = '|';
+			player4[i] = '|';
+		}
+		else
+		{
+			player1[i] = 'n';
+			player2[i] = 'n';
+			player3[i] = 'n';
+			player4[i] = 'n';
+		}
+	}
+	
 	for(int i = 0; i < max_players; i++)
 	{
-		
 		toldPlayerSeed[i] = false;
-		
 	}
 	
 	int seed = -1;
@@ -154,6 +172,7 @@ int main(int argc, char *argv[]) {
                 // find the first empty position in the array
 				if (clientSockets[i] == 0) {
                     clientSockets[i] = clientSocket;
+					numberOfConnectedPlayers++;
                     printf("Added new client to clientSockets[%d] = %d\n", i, clientSocket);
 					break;
                 }
@@ -173,9 +192,32 @@ int main(int argc, char *argv[]) {
                     // The client disconnected
                     close(clientSocket);
 					toldPlayerSeed[findSocketIndex(clientSocket, clientSockets)] = false;
+					numberOfConnectedPlayers--;
                     clientSockets[i] = 0;
+					
+					if(i == 0)
+					{
+						for(int k = 0; k < (unsigned)strlen(player1); k++){ player1[k] = 'n'; }
+						player1[16] = '|';
+					}
+					else if(i == 1)
+					{
+						for(int k = 0; k < (unsigned)strlen(player2); k++){ player2[k] = 'n'; }
+						player2[16] = '|';
+					}
+					else if(i == 2)
+					{
+						for(int k = 0; k < (unsigned)strlen(player3); k++){ player3[k] = 'n'; }
+						player3[16] = '|';
+					}
+					else
+					{
+						for(int k = 0; k < (unsigned)strlen(player4); k++){ player4[k] = 'n'; }
+						player4[16] = '|';
+					}
+					
                 } else {
-					printf("Received message from Client %d: \"%s\"\n", clientSocket, buffer);
+					//printf("Received message from Client %d: \"%s\"\n", clientSocket, buffer);
 					
 					int currentIndex = findSocketIndex(clientSocket, clientSockets);
 					if(toldPlayerSeed[currentIndex] == false) //setup, basically just passing the seed around
@@ -195,6 +237,7 @@ int main(int argc, char *argv[]) {
 							send(clientSocket, buffer, strlen(buffer), 0);
 						}
 					}
+					/*
 					else //repeating game loop, basically just movement
 					{
 						// ESSENTIAL SO SELECT() DOESN'T BLOCK
@@ -202,6 +245,255 @@ int main(int argc, char *argv[]) {
 						// i dont think the client ever does anything with this
 						// BUT IT IS EXPERIMENTALLY NECESSARY
 					}
+					*/
+					
+					int index = findSocketIndex(clientSocket, clientSockets);
+					
+					if(index == 0)
+					{
+						
+						for(int j = 0; j < 33; j++)
+						{
+							
+							player1[j] = buffer[j];
+							
+						}
+						
+					}
+					else if(index == 1)
+					{
+						
+						for(int j = 0; j < 33; j++)
+						{
+							
+							player2[j] = buffer[j];
+							
+						}
+						
+					}
+					else if(index == 2)
+					{
+						
+						for(int j = 0; j < 33; j++)
+						{
+							
+							player3[j] = buffer[j];
+							
+						}
+						
+					}
+					else if(index == 3)
+					{
+						
+						for(int j = 0; j < 33; j++)
+						{
+							
+							player4[j] = buffer[j];
+							
+						}
+						
+					}
+					else
+					{
+						printf("/nSocket does not exist in server's list");
+					}
+					
+					int firstTerminator = -1;
+
+					for(int j = 0; j < 255; j++){
+						if(buffer[j] == '\0'){
+							firstTerminator = j;
+							break;
+						}
+					}
+					
+					buffer[firstTerminator] = '|';
+					if(numberOfConnectedPlayers == 1)
+					{
+						buffer[firstTerminator + 1] = '0';
+					}
+					else if(numberOfConnectedPlayers == 2)
+					{
+						buffer[firstTerminator + 1] = '1';
+					}
+					else if(numberOfConnectedPlayers == 3)
+					{
+						buffer[firstTerminator + 1] = '2';
+					}
+					else if(numberOfConnectedPlayers == 4)
+					{
+						buffer[firstTerminator + 1] = '3';
+					}
+					buffer[firstTerminator + 2] = '|';
+					
+					firstTerminator = firstTerminator + 3;
+					
+					if(index == 0) //we are player1
+					{
+					
+						int incTemp = 0;
+					
+						for(int j = firstTerminator; j < firstTerminator + (unsigned)strlen(player2); j++)
+						{
+							
+							buffer[j] = player2[incTemp];
+							incTemp++;
+							
+						}
+						
+						firstTerminator = firstTerminator + (unsigned)strlen(player2);
+						incTemp = 0;
+						buffer[firstTerminator] = '|';
+						firstTerminator++;
+						
+						for(int j = firstTerminator; j < firstTerminator + (unsigned)strlen(player3); j++)
+						{
+							
+							buffer[j] = player3[incTemp];
+							incTemp++;
+							
+						}
+						
+						firstTerminator = firstTerminator + (unsigned)strlen(player3);
+						incTemp = 0;
+						buffer[firstTerminator] = '|';
+						firstTerminator++;
+						
+						for(int j = firstTerminator; j < firstTerminator + (unsigned)strlen(player4); j++)
+						{
+							
+							buffer[j] = player4[incTemp];
+							incTemp++;
+							
+						}
+												
+					}
+					else if(index == 1) //we are player2
+					{
+					
+						int incTemp = 0;
+					
+						for(int j = firstTerminator; j < firstTerminator + (unsigned)strlen(player1); j++)
+						{
+							
+							buffer[j] = player1[incTemp];
+							incTemp++;
+							
+						}
+						
+						firstTerminator = firstTerminator + (unsigned)strlen(player1);
+						incTemp = 0;
+						buffer[firstTerminator] = '|';
+						firstTerminator++;
+						
+						for(int j = firstTerminator; j < firstTerminator + (unsigned)strlen(player3); j++)
+						{
+							
+							buffer[j] = player3[incTemp];
+							incTemp++;
+							
+						}
+						
+						firstTerminator = firstTerminator + (unsigned)strlen(player3);
+						incTemp = 0;
+						buffer[firstTerminator] = '|';
+						firstTerminator++;
+						
+						for(int j = firstTerminator; j < firstTerminator + (unsigned)strlen(player4); j++)
+						{
+							
+							buffer[j] = player4[incTemp];
+							incTemp++;
+							
+						}
+												
+					}
+					else if(index == 2) //we are player3
+					{
+					
+						int incTemp = 0;
+					
+						for(int j = firstTerminator; j < firstTerminator + (unsigned)strlen(player2); j++)
+						{
+							
+							buffer[j] = player2[incTemp];
+							incTemp++;
+							
+						}
+						
+						firstTerminator = firstTerminator + (unsigned)strlen(player2);
+						incTemp = 0;
+						buffer[firstTerminator] = '|';
+						firstTerminator++;
+						
+						for(int j = firstTerminator; j < firstTerminator + (unsigned)strlen(player1); j++)
+						{
+							
+							buffer[j] = player1[incTemp];
+							incTemp++;
+							
+						}
+						
+						firstTerminator = firstTerminator + (unsigned)strlen(player1);
+						incTemp = 0;
+						buffer[firstTerminator] = '|';
+						firstTerminator++;
+						
+						for(int j = firstTerminator; j < firstTerminator + (unsigned)strlen(player4); j++)
+						{
+							
+							buffer[j] = player4[incTemp];
+							incTemp++;
+							
+						}
+												
+					}
+					else if(index == 3) //we are player4
+					{
+					
+						int incTemp = 0;
+					
+						for(int j = firstTerminator; j < firstTerminator + (unsigned)strlen(player2); j++)
+						{
+							
+							buffer[j] = player2[incTemp];
+							incTemp++;
+							
+						}
+						
+						firstTerminator = firstTerminator + (unsigned)strlen(player2);
+						incTemp = 0;
+						buffer[firstTerminator] = '|';
+						firstTerminator++;
+						
+						for(int j = firstTerminator; j < firstTerminator + (unsigned)strlen(player3); j++)
+						{
+							
+							buffer[j] = player3[incTemp];
+							incTemp++;
+							
+						}
+						
+						firstTerminator = firstTerminator + (unsigned)strlen(player3);
+						incTemp = 0;
+						buffer[firstTerminator] = '|';
+						firstTerminator++;
+						
+						for(int j = firstTerminator; j < firstTerminator + (unsigned)strlen(player1); j++)
+						{
+							
+							buffer[j] = player1[incTemp];
+							incTemp++;
+							
+						}
+												
+					}
+					else //ran out of players to be, something went wrong
+					{
+						printf("Something went terribly wrong, we don't have a player for index %d\n", index);
+					}
+					
+					printf("%s\n",  buffer);
 					send(clientSocket, buffer, strlen(buffer), 0);
                 }
             }
