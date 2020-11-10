@@ -8,9 +8,13 @@ In order for the project to build, you must have your environment configured cor
 
 Users will need the default installation of SDL2 and some of its extensions, obtained via:
 
-1. `sudo apt-get install libsdl2-dev`
+1. `apt-cache search libsdl2`
+2. `sudo apt-get install libsdl2-dev`
+
+and...
+
+1. `apt-cache search libsdl2-image`
 2. `sudo apt-get install libsdl2-image-dev`
-3. `sudo apt-get install libsdl2-ttf-dev`
 
 # Building
 
