@@ -47,6 +47,9 @@ Uint32 then;
 Uint32 delta;
 Uint32 now;
 std::vector <Block> blocks;	//stores collidable blocks
+
+std::vector <Block> movingblocks;
+
 std::vector <SDL_Rect> decorative_blocks;	//stores non-collidable blocks
 int clientSocket;	//Socket for connecting to the server
 
@@ -274,9 +277,9 @@ Player* generateTerrain()
 			if (cave_area[y/BOX_WIDTH][x/BOX_WIDTH] && b)
 			{
 				SDL_Rect block = {0, y, BOX_WIDTH * (x / BOX_WIDTH), BOX_HEIGHT};
-				Block* bubby = new Block(block, block_type); //normal block
-				//Block* bubby = new Block(block, 1); //icy block
-				//Block* bubby = new Block(block, 2); //bouncy block
+				Block* bubby = new Block(block, block_type, false, 0, 0); //normal block
+				//Block* bubby = new Block(block, 1, false, 0, 0); //icy block
+				//Block* bubby = new Block(block, 2, false, 0, 0); //bouncy block
 				blocks.push_back(*bubby);
 				//blocks.push_back(block);
 				b = false;
@@ -293,9 +296,9 @@ Player* generateTerrain()
 			if (!cave_area[y/BOX_WIDTH][x/BOX_WIDTH] && !b)
 			{
 				SDL_Rect block = {x, y, BOX_WIDTH *100, BOX_HEIGHT};
-				Block* bubby = new Block(block, block_type); //normal block
-				//Block* bubby = new Block(block, 1); //icy block
-				//Block* bubby = new Block(block, 2); //bouncy block
+				Block* bubby = new Block(block, block_type, false, 0, 0); //normal block
+				//Block* bubby = new Block(block, 1, false, false, 0, 0); //icy block
+				//Block* bubby = new Block(block, 2, false, false, 0, 0); //bouncy block
 				blocks.push_back(*bubby);
 				//blocks.push_back(block);
 				break;
@@ -303,9 +306,9 @@ Player* generateTerrain()
 			else if (x == SCREEN_WIDTH - BOX_WIDTH)
 			{
 				SDL_Rect block = {x, y, BOX_WIDTH *100, BOX_HEIGHT};
-				Block* bubby = new Block(block, block_type); //normal block
-				//Block* bubby = new Block(block, 1); //icy block
-				//Block* bubby = new Block(block, 2); //bouncy block
+				Block* bubby = new Block(block, block_type, false, 0, 0); //normal block
+				//Block* bubby = new Block(block, 1, false, 0, 0); //icy block
+				//Block* bubby = new Block(block, 2, false, 0, 0); //bouncy block
 				blocks.push_back(*bubby);
 				//blocks.push_back(block);
 				break;
@@ -316,7 +319,7 @@ Player* generateTerrain()
 	}
 
 	SDL_Rect final_block = {0, WORLD_HEIGHT, BOX_WIDTH *100, BOX_HEIGHT};
-	Block* bubby = new Block(final_block, 3);
+	Block* bubby = new Block(final_block, 3, false, 0, 0);
 	blocks.push_back(*bubby);
 	
 	return user;
@@ -477,9 +480,9 @@ Player* generateTerrainSeed(int seed)
 			if (cave_area[y/BOX_WIDTH][x/BOX_WIDTH] && b)
 			{
 				SDL_Rect block = {0, y, BOX_WIDTH * (x / BOX_WIDTH), BOX_HEIGHT};
-				Block* bubby = new Block(block, 0); //normal block
-				//Block* bubby = new Block(block, 1); //icy block
-				//Block* bubby = new Block(block, 2); //bouncy block
+				Block* bubby = new Block(block, 0, false, 0, 0); //normal block
+				//Block* bubby = new Block(block, 1, false, 0, 0); //icy block
+				//Block* bubby = new Block(block, 2, false, 0, 0); //bouncy block
 				blocks.push_back(*bubby);
 				//blocks.push_back(block);
 				b = false;
@@ -496,9 +499,9 @@ Player* generateTerrainSeed(int seed)
 			if (!cave_area[y/BOX_WIDTH][x/BOX_WIDTH] && !b)
 			{
 				SDL_Rect block = {x, y, BOX_WIDTH *100, BOX_HEIGHT};
-				Block* bubby = new Block(block, 0); //normal block
-				//Block* bubby = new Block(block, 1); //icy block
-				//Block* bubby = new Block(block, 2); //bouncy block
+				Block* bubby = new Block(block, 0, false, 0, 0); //normal block
+				//Block* bubby = new Block(block, 1, false, 0, 0); //icy block
+				//Block* bubby = new Block(block, 2, false, 0, 0); //bouncy block
 				blocks.push_back(*bubby);
 				//blocks.push_back(block);
 				break;
@@ -506,9 +509,9 @@ Player* generateTerrainSeed(int seed)
 			else if (x == SCREEN_WIDTH - BOX_WIDTH)
 			{
 				SDL_Rect block = {x, y, BOX_WIDTH *100, BOX_HEIGHT};
-				Block* bubby = new Block(block, 0); //normal block
-				//Block* bubby = new Block(block, 1); //icy block
-				//Block* bubby = new Block(block, 2); //bouncy block
+				Block* bubby = new Block(block, 0, false, 0, 0); //normal block
+				//Block* bubby = new Block(block, 1, false, 0, 0); //icy block
+				//Block* bubby = new Block(block, 2, false, 0, 0); //bouncy block
 				blocks.push_back(*bubby);
 				//blocks.push_back(block);
 				break;
@@ -645,6 +648,8 @@ void runGame(bool multiplayer)
 	bzero(buffer, 256);
 	SDL_Event e;
 	bool gameon = true;
+	SDL_Rect bee = {user->x_pos, user->y_pos, BOX_WIDTH*5, BOX_HEIGHT};
+	Block* hellothere = new Block(bee, 1, true, 1, 80); //normal block
 	while (gameon)
 	{
     now = SDL_GetTicks();
@@ -758,6 +763,12 @@ void runGame(bool multiplayer)
 		SDL_SetRenderDrawColor(screen->renderer, 0x00, 0x00, 0x00, 0xFF);
 		SDL_RenderClear(screen->renderer);
 
+		//for all moving blocks, update position and time counter
+		if((*hellothere).moving){
+			(*hellothere).updatePosition();
+		}
+
+		blocks.push_back(*hellothere);
 		// Draw boxes
 		//SDL_SetRenderDrawColor(screen->renderer, 0xFF, 0x00, 0x00, 0xFF);
 		
@@ -780,7 +791,11 @@ void runGame(bool multiplayer)
 				SDL_RenderFillRect(screen->renderer, &(b.block_rect));
 			}
 		}
+
+		
 		user->detectCollisions(blocks);
+		blocks.pop_back();
+		
 
 		float mX = 0;
 		float mY = 0;
