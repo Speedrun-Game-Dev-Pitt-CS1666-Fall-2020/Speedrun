@@ -7,10 +7,8 @@
 #include <SDL.h>
 #include <SDL_image.h>
 
-BouncyBlock::BouncyBlock(float x, float y, int w, int h) : x_pos{x}, y_pos{y}, width{w}, height{h}
+BouncyBlock::BouncyBlock(float x, float y, int w, int h, float xv, float yv) : x_pos{x}, y_pos{y}, width{w}, height{h}, x_vel{xv}, y_vel{yv}
 {
-    x_vel = 2;
-    y_vel = 2;
     x_accel = 0;
     //gravity
     y_accel = 1;
@@ -53,7 +51,22 @@ void BouncyBlock::detectCollisionsBlock(std::vector <Block> r)
     }
 }
 
-bool Player::isColliding(SDL_Rect *r)
+void BouncyBlock::detectCollisionsBouncy(std::vector <BouncyBlock> r)
+{
+    // for (auto block: r)
+    // {
+    //     SDL_Rect temp = {block.x_pos, block.y_pos, block.width, block.height}
+    //     if (isColliding(&(block.block_rect))){
+    //         //for now also pass in a, later will get blocktype from struct
+    //         handleCollision(block.block_rect);
+    //         //std::cout << a << std::endl;
+    //     }
+
+    //     delete(temp);
+    // }
+}
+
+bool BouncyBlock::isColliding(SDL_Rect *r)
 {
     // Check vertical overlap
     if (y_pos + height <= r->y)
@@ -75,13 +88,8 @@ bool Player::isColliding(SDL_Rect *r)
 //spring traps + friction and stuff change accel variables
 
 //FOR NOW, int a gets block height for block type. will get block type from struct
-void Player::handleCollision(Block r)
+void BouncyBlock::handleCollision(Block r)
 {
-    float bounce = 15;
-
-    if(r.block_type == 1){
-        friction = 0.1;
-    }
 
     //Check player velocity direction for
 
@@ -130,23 +138,8 @@ void Player::handleCollision(Block r)
         x_pos = complementaryX;
         y_pos = requiredY;
         //if falling, cant jump is false
-        if(y_vel > 0){
-            cantJump = false;
-        }
 
-        //not bouncy
-        if(r.block_type != 2){
-            y_vel = 0;
-        }else{  //bouncy
-            if(y_vel > 0){
-                y_vel = -bounce;
-                cantJump = true;
-            }else{
-                y_vel = bounce;
-            }
-        }
-    
-        //y_vel = 0;
+        y_vel *= -1;
     
         
     }else if(y_vel == 0){
@@ -155,17 +148,9 @@ void Player::handleCollision(Block r)
 
 
         //not bouncy
-        if(r.block_type != 2){
-            x_vel = 0;
-        }else{  //bouncy
-            if(x_vel > 0){
-                x_vel = -bounce;
-            }else{
-                x_vel = bounce;
-            }
-        }
+        x_vel *= -1;
 
-        //x_vel = 0;
+
 
     }else {
 
@@ -176,16 +161,7 @@ void Player::handleCollision(Block r)
             //y_pos = complementaryY;
             x_pos = requiredX;
 
-            //not bouncy
-            if(r.block_type != 2){
-                x_vel = 0;
-            }else{  //bouncy
-                if(x_vel > 0){
-                    x_vel = -bounce;
-                }else{
-                    x_vel = bounce;
-                }
-            }
+            x_vel *= -1;
 
             //x_vel = 0;
 
@@ -194,20 +170,9 @@ void Player::handleCollision(Block r)
             y_pos = requiredY;
 
             //if falling, cant jump is false
-            if(y_vel > 0)
-                cantJump = false;
             
             //not bouncy
-            if(r.block_type != 2){
-                y_vel = 0;
-            }else{  //bouncy
-                if(y_vel > 0){
-                    y_vel = -bounce;
-                    cantJump = true;
-                }else{
-                    y_vel = bounce;
-                }
-            }
+            y_vel *= -1;
 
             //y_vel = 0;
         }
