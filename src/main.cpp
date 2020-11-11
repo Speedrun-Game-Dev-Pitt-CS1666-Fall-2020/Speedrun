@@ -23,6 +23,8 @@
 #include "Image.h"
 #include "Player.h"
 #include "Block.h"
+#include "BouncyBlock.h"
+
 #include "MenuStateMachine.hpp"
 
 #include "Block.h"
@@ -639,6 +641,7 @@ void runGame(bool multiplayer)
 	}
 	SDL_Rect bee = {user->x_pos, user->y_pos+20, BOX_WIDTH*5, BOX_HEIGHT};
 	Block* hellothere = new Block(bee, 1, true, 1, 80); //normal block
+	BouncyBlock* bouncy = new BouncyBlock(user->x_pos, user->y_pos+20, BOX_WIDTH, BOX_HEIGHT, 2, 2);
 	blocks.push_back(*hellothere);
 
 
@@ -660,6 +663,7 @@ void runGame(bool multiplayer)
 
 		then = now;	
 		user->applyForces();
+		bouncy->applyForces();
 
 		//get intended motion based off input
 		SDL_PollEvent(&e);
@@ -706,6 +710,7 @@ void runGame(bool multiplayer)
 
 		// Move box
 		user->updatePosition();
+		bouncy->updatePosition();
 		//if user position on screen < 720/3
 			//then change user position and user position on screen, not blocks.
 		//if user position on screen is > 1440/3
@@ -795,8 +800,7 @@ void runGame(bool multiplayer)
 				SDL_RenderFillRect(screen->renderer, &(b.block_rect));
 			}
 		}
-
-		
+		bouncy->detectCollisionsBlock(blocks);
 		user->detectCollisions(blocks);
 		
 
@@ -894,7 +898,9 @@ void runGame(bool multiplayer)
 		{
 			std::cout << "Client at position: (" << mX << ", " << mY << ")" << std::endl;
 		}
-		
+		SDL_SetRenderDrawColor(screen->renderer, 0xAA, 0xBB, 0xCC, 0xFF);
+		SDL_Rect bounce_rect = {bouncy->x_pos, (user->y_screenPos + bouncy->y_pos) - user->y_pos, bouncy->width, bouncy->height};
+		SDL_RenderFillRect(screen->renderer, &(bounce_rect));
 		SDL_Rect player_rect = {user->x_pos, user->y_screenPos, user->width, user->height};
 		SDL_RenderCopy(screen->renderer, user->player_texture, NULL, &player_rect);
 		SDL_RenderPresent(screen->renderer);
