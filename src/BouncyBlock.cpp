@@ -36,6 +36,18 @@ void BouncyBlock::applyForces()
 
     y_vel += y_accel;
 
+    if (x_vel > 10)
+        x_vel = 10;
+
+    if (x_vel < -10)
+        x_vel = -10;
+
+    if (y_vel > 15)
+        y_vel = 15;
+
+    if (y_vel < -8)
+        y_vel = -8;
+
 
 }
 

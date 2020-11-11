@@ -50,7 +50,7 @@ Uint32 delta;
 Uint32 now;
 std::vector <Block> blocks;	//stores collidable blocks
 
-std::vector <Block> movingblocks;
+std::vector <BouncyBlock> bouncyblocks;
 
 std::vector <SDL_Rect> decorative_blocks;	//stores non-collidable blocks
 int clientSocket;	//Socket for connecting to the server
@@ -116,6 +116,7 @@ bool init()
 void close()
 {
 	delete screen;
+
 	// Quit SDL subsystems
 	SDL_Quit();
 }
@@ -641,9 +642,13 @@ void runGame(bool multiplayer)
 	}
 	SDL_Rect bee = {user->x_pos, user->y_pos+20, BOX_WIDTH*5, BOX_HEIGHT};
 	Block* hellothere = new Block(bee, 1, true, 1, 80); //normal block
-	BouncyBlock* bouncy = new BouncyBlock(user->x_pos, user->y_pos+20, BOX_WIDTH, BOX_HEIGHT, 2, 2);
 	blocks.push_back(*hellothere);
 
+	BouncyBlock* bouncy = new BouncyBlock(user->x_pos, user->y_pos+20, BOX_WIDTH, BOX_HEIGHT, 2, 2);
+	BouncyBlock* bouncy2 = new BouncyBlock(user->x_pos+20, user->y_pos+20, BOX_WIDTH, BOX_HEIGHT, 3, -1);
+
+	bouncyblocks.push_back(*bouncy);
+	bouncyblocks.push_back(*bouncy2);
 
 	//Define the blocks
 	/*SDL_Rect block = {SCREEN_WIDTH/2, SCREEN_HEIGHT-20, 200, 20};
@@ -663,7 +668,14 @@ void runGame(bool multiplayer)
 
 		then = now;	
 		user->applyForces();
-		bouncy->applyForces();
+
+		//apply forces on all bouncys
+		for (int i=0; i<bouncyblocks.size(); i++)
+		{
+			BouncyBlock temp = bouncyblocks.at(i);
+			temp.applyForces();
+			bouncyblocks.at(i) = temp;
+		}
 
 		//get intended motion based off input
 		SDL_PollEvent(&e);
@@ -710,7 +722,13 @@ void runGame(bool multiplayer)
 
 		// Move box
 		user->updatePosition();
-		bouncy->updatePosition();
+		//move bouncies
+		for (int i=0; i<bouncyblocks.size(); i++)
+		{
+			BouncyBlock temp = bouncyblocks.at(i);
+			temp.updatePosition();
+			bouncyblocks.at(i) = temp;
+		}
 		//if user position on screen < 720/3
 			//then change user position and user position on screen, not blocks.
 		//if user position on screen is > 1440/3
@@ -800,8 +818,17 @@ void runGame(bool multiplayer)
 				SDL_RenderFillRect(screen->renderer, &(b.block_rect));
 			}
 		}
-		bouncy->detectCollisionsBlock(blocks);
+
+		//detect collisions for all bouncy blocks
+		for (int i=0; i<bouncyblocks.size(); i++)
+		{
+			BouncyBlock temp = bouncyblocks.at(i);
+			temp.detectCollisionsBlock(blocks);
+			bouncyblocks.at(i) = temp;
+		}
+
 		user->detectCollisions(blocks);
+		user->detectBouncyBlockCollisions(bouncyblocks);
 		
 
 		float mX = 0;
@@ -898,9 +925,20 @@ void runGame(bool multiplayer)
 		{
 			std::cout << "Client at position: (" << mX << ", " << mY << ")" << std::endl;
 		}
-		SDL_SetRenderDrawColor(screen->renderer, 0xAA, 0xBB, 0xCC, 0xFF);
-		SDL_Rect bounce_rect = {bouncy->x_pos, (user->y_screenPos + bouncy->y_pos) - user->y_pos, bouncy->width, bouncy->height};
-		SDL_RenderFillRect(screen->renderer, &(bounce_rect));
+	
+
+		//render bouncy blocks
+		for (int i=0; i<bouncyblocks.size(); i++)
+		{
+			BouncyBlock temp = bouncyblocks.at(i);
+			
+			SDL_SetRenderDrawColor(screen->renderer, 0xAA, 0xBB, 0xCC, 0xFF);
+			SDL_Rect bounce_rect = {temp.x_pos, (user->y_screenPos + temp.y_pos) - user->y_pos, temp.width, temp.height};
+			SDL_RenderFillRect(screen->renderer, &(bounce_rect));
+
+			bouncyblocks.at(i) = temp;
+		}
+
 		SDL_Rect player_rect = {user->x_pos, user->y_screenPos, user->width, user->height};
 		SDL_RenderCopy(screen->renderer, user->player_texture, NULL, &player_rect);
 		SDL_RenderPresent(screen->renderer);

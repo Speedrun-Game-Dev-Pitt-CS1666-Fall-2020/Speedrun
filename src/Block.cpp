@@ -42,7 +42,6 @@ void Block::updatePosition()
         }
 
         block_rect.x += speed;
-        std::cout << "heya" << block_rect.x << std::endl;
     }
     
 
