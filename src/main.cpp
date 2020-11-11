@@ -637,6 +637,9 @@ void runGame(bool multiplayer)
 		//create the player and generate the terrain
 		user = generateTerrain();
 	}
+	SDL_Rect bee = {user->x_pos, user->y_pos+20, BOX_WIDTH*5, BOX_HEIGHT};
+	Block* hellothere = new Block(bee, 1, true, 1, 80); //normal block
+	blocks.push_back(*hellothere);
 
 
 	//Define the blocks
@@ -648,8 +651,6 @@ void runGame(bool multiplayer)
 	bzero(buffer, 256);
 	SDL_Event e;
 	bool gameon = true;
-	SDL_Rect bee = {user->x_pos, user->y_pos, BOX_WIDTH*5, BOX_HEIGHT};
-	Block* hellothere = new Block(bee, 1, true, 1, 80); //normal block
 	while (gameon)
 	{
     now = SDL_GetTicks();
@@ -764,11 +765,14 @@ void runGame(bool multiplayer)
 		SDL_RenderClear(screen->renderer);
 
 		//for all moving blocks, update position and time counter
-		if((*hellothere).moving){
-			(*hellothere).updatePosition();
+		for (int i=0; i<blocks.size(); i++)
+		{
+			if(blocks.at(i).moving){
+				Block temp = blocks.at(i);
+				temp.updatePosition();
+				blocks.at(i) = temp;
+			}
 		}
-
-		blocks.push_back(*hellothere);
 		// Draw boxes
 		//SDL_SetRenderDrawColor(screen->renderer, 0xFF, 0x00, 0x00, 0xFF);
 		
@@ -794,7 +798,6 @@ void runGame(bool multiplayer)
 
 		
 		user->detectCollisions(blocks);
-		blocks.pop_back();
 		
 
 		float mX = 0;
