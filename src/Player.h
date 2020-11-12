@@ -3,6 +3,7 @@
 #include <SDL_image.h>
 #include <vector>
 #include "Block.h"
+#include "BouncyBlock.h"
 
 class Player
 {
@@ -32,5 +33,9 @@ public:
     void detectCollisions(std::vector <Block> r);
     bool isColliding(SDL_Rect* r);
     void handleCollision(Block r);
+
+    void detectBouncyBlockCollisions(std::vector <BouncyBlock> r);
+    bool isBouncyBlockColliding(BouncyBlock b);
+    void handleBouncyBlockCollision(BouncyBlock r);
     
 };

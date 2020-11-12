@@ -1,5 +1,6 @@
 #include "Player.h"
 #include "Block.h"
+#include "BouncyBlock.h"
 #include <cmath>
 #include <iostream>
 #include <stdlib.h>
@@ -23,10 +24,8 @@ Player::Player(float x, float y, int w, int h, SDL_Texture *t) : x_pos{x}, y_pos
 
 void Player::updatePosition()
 {
-	//move horizontally, constrained by screen width
     x_pos += x_vel;
 
-	//move vertically, contrained by depth of world
     y_pos += y_vel;
 
 }
@@ -70,6 +69,14 @@ void Player::applyForces()
     if (x_vel < -4)
         x_vel = -4;
 
+    if (y_vel > 18)
+        y_vel = 18;
+
+    if (y_vel < -18)
+        y_vel = -18;
+
+    
+
 
     //if (cantJump)
     y_vel += y_accel;
@@ -109,6 +116,60 @@ void Player::detectCollisions(std::vector <Block> r)
             //std::cout << a << std::endl;
         }
     }
+}
+
+void Player::detectBouncyBlockCollisions(std::vector <BouncyBlock> r)
+{
+
+    for (auto block: r)
+    {
+        
+        if (isBouncyBlockColliding(block)){
+            //for now also pass in a, later will get blocktype from struct
+            handleBouncyBlockCollision(block);
+            //std::cout << a << std::endl;
+        }
+        
+    }
+}
+
+bool Player::isBouncyBlockColliding(BouncyBlock b)
+{
+    // Check vertical overlap
+    if (y_pos + height <= b.y_pos)
+        return false;
+    if (y_pos >= b.y_pos + b.height)
+        return false;
+
+    // Check horizontal overlap
+    if (x_pos >= b.x_pos + b.width)
+        return false;
+    if (x_pos + width <= b.x_pos)
+        return false;
+
+    // Must overlap in both
+    return true;
+}
+
+void Player::handleBouncyBlockCollision(BouncyBlock r)
+{
+
+    if(r.x_vel < 0){
+        x_vel = -4;
+        std::cout<<"left"<<std::endl;
+    }else if(r.x_vel > 0){
+        x_vel = 4;
+        std::cout<<"right"<<std::endl;
+    }
+
+    if(r.y_vel < 0){
+        y_vel = -4;
+        std::cout<<"up"<<std::endl;
+    }else if(r.y_vel > 0){
+        y_vel = 4;
+        std::cout<<"down"<<std::endl;
+    }
+
 }
 
 bool Player::isColliding(SDL_Rect *r)
