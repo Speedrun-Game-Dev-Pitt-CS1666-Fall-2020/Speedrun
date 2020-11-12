@@ -23,6 +23,6 @@ public:
 
     float time;
 
-    Block(SDL_Rect r, int b, bool m, float s, int t);
+    Block(SDL_Rect r, int b, bool m, float s, float t);
     void updatePosition();
 };

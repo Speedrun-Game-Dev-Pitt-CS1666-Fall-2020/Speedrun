@@ -15,6 +15,12 @@ BouncyBlock::BouncyBlock(float x, float y, int w, int h, float xv, float yv) : x
 
 }
 
+/*
+BouncyBlock::~BouncyBlock(){
+    delete this;
+}
+*/
+
 void BouncyBlock::updatePosition()
 {
 	//move horizontally, constrained by screen width
