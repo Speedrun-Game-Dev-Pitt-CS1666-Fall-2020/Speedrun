@@ -162,8 +162,8 @@ void Player::handleBouncyBlockCollision(BouncyBlock r)
         //std::cout<<"left"<<std::endl;
     }else if(r.x_vel > 0){
         x_vel += 8;
-        if(x_vel > 18){
-            x_vel = 18;
+        if(x_vel > 4){
+            x_vel = 4;
         }
         //std::cout<<"right"<<std::endl;
     }
