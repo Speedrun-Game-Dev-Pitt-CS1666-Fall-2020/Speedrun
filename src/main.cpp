@@ -15,7 +15,10 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
+<<<<<<< HEAD
 #include <time.h>
+=======
+>>>>>>> bdfefeb2ddace240d67a5ba6fac578353d7a7c2b
 
 // Our headers
 #include "XorShifter.h"
@@ -559,6 +562,17 @@ void runGame(bool multiplayer)
 		SDL_RenderCopy(screen->renderer, user->player_texture, NULL, &player_rect);
 		SDL_RenderPresent(screen->renderer);
 	}
+}
+
+void drawOtherPlayers(Player* thisPlayer, float otherPlayerOriginX, float otherPlayerOriginY, int playerNum)
+{
+	float otherPlayerScreenY = thisPlayer->y_screenPos - (thisPlayer->y_pos - otherPlayerOriginY);
+
+	std::string spriteName = "../res/Guy" + std::to_string(playerNum) + std::string(".png");
+	SDL_Rect player = {otherPlayerOriginX, otherPlayerScreenY, thisPlayer->width, thisPlayer->height};
+	std::cout << "Placing player " << playerNum << " at " << otherPlayerOriginX << ", " << otherPlayerScreenY << std::endl;
+	SDL_RenderCopy(screen->renderer, loadTexture((spriteName)), NULL, &player);
+	SDL_RenderPresent(screen->renderer);
 }
 
 void error(const char *msg)
