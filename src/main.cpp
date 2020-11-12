@@ -15,6 +15,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
+#include <time.h>
 
 // Our headers
 #include "XorShifter.h"
@@ -34,11 +35,10 @@ constexpr int SCREEN_WIDTH = 1280;
 constexpr int SCREEN_HEIGHT = 720;
 
 //for move player tutorial, may move to player object later
-constexpr int BOX_WIDTH = 20;
-constexpr int BOX_HEIGHT = 20;
+constexpr int BOX_SIZE = 20;
 constexpr int WORLD_DEPTH = 7200;
 
-constexpr int WORLD_HEIGHT = 720 * 10 + 20 * BOX_HEIGHT * 3; // 3 caverns, each 20 boxes tall
+constexpr int WORLD_HEIGHT = 720 * 10 + 20 * BOX_SIZE * 3; // 3 caverns, each 20 boxes tall
 
 // Globals
 Screen *screen = nullptr;
@@ -50,17 +50,6 @@ std::vector <Block> blocks;	//stores collidable blocks
 std::vector <Block> optBlocks;	//stores optimized colliable blocks
 std::vector <SDL_Rect> decorative_blocks;	//stores non-collidable blocks
 int clientSocket;	//Socket for connecting to the server
-
-// Function declarations
-bool init();
-void close();
-Image *loadImage(const char *, int, int);
-void runCredits();
-void runGame();
-void runMenu();
-Player* generateTerrain();
-void drawOtherPlayers(Player*, float, float, int);
-SDL_Texture *loadTexture(std::string);
 
 Image *loadImage(const char *src, int w, int h)
 {
@@ -116,412 +105,113 @@ void close()
 	SDL_Quit();
 }
 
-//create blocks, add them to the blocks vector, and return a player at a valid spawn point
-Player* generateTerrain()
+void drawOtherPlayers(Player* thisPlayer, float otherPlayerOriginX, float otherPlayerOriginY, int playerNum)
+{
+	float otherPlayerScreenY = thisPlayer->y_screenPos - (thisPlayer->y_pos - otherPlayerOriginY);
+
+	std::string spriteName = "../res/Guy" + std::to_string(playerNum) + std::string(".png");
+	SDL_Rect player = {otherPlayerOriginX, otherPlayerScreenY, thisPlayer->width, thisPlayer->height};
+	std::cout << "Placing player " << playerNum << " at " << otherPlayerOriginX << ", " << otherPlayerScreenY << std::endl;
+	SDL_RenderCopy(screen->renderer, loadTexture((spriteName)), NULL, &player);
+	SDL_RenderPresent(screen->renderer);
+}
+
+#include "GameMap.h"
+#include "MapGenerator.h"
+
+#define MIN_DENSITY 100
+
+Player* generateTerrain(int seed)
 {
 	blocks.clear();
 	decorative_blocks.clear();
 
-	srand (time(NULL));
-	int rand (void);
+	GameMap* map = new GameMap(seed);
+	MapGenerator* mg = new MapGenerator(map);
 
-	XorShifter *rng = new XorShifter(412001000);
-
-	SimplexNoise *simp = new SimplexNoise(rand() % 1000000);
-	simp->freq = 0.05f;
-	simp->octaves = 2;
-	simp->updateFractalBounds();
-
-	int cave_nums[WORLD_HEIGHT / BOX_HEIGHT];
-
-
-	//generate values from a "line" of noise, one value for each row of blocks
-	int range = WORLD_HEIGHT/BOX_WIDTH/2;
-	for (int test = -range; test < range; test++)
-	{
-		float val_f = simp->getSingle(1, test) * 100;
-
-		int val_i = (int)val_f;
-
-		cave_nums[test + range] = val_i;
-	}
-
-	//cave_area is a boolean array that tracks which blocks are part of the walls and which are part of the cave
-	//a value of "true" means that the corresponding block is part of the cave, and will not be rendered
-	bool cave_area[WORLD_HEIGHT/BOX_WIDTH][SCREEN_WIDTH/BOX_WIDTH];
-	for(int i = 0; i < WORLD_HEIGHT/BOX_WIDTH; i++)
-	{
-		for(int j = 0; j < SCREEN_WIDTH/BOX_WIDTH; j++)
-		{
-			cave_area[i][j]=false;
-		}
-	}
-
-	bool player_created = false;
-	Player *user;
-	int cave_nums_index = 0;
-
-	//"gaps" define where the caverns will be placed
-	int gap1 = (rand() % 20) + 100;
-	int gap2 = (rand() % 20) + 200;
-	int gap3 = (rand() % 20) + 300;
-
-	//for each block on the screen
-	for (int y = 0; y < WORLD_HEIGHT; y = y + BOX_HEIGHT)
-	{
-		//place cavern at current location
-		if (y / BOX_HEIGHT == gap1 || y / BOX_HEIGHT == gap2 || y / BOX_HEIGHT == gap3)
-		{
-			//cavern should be 20 boxes tall
-			int cavern_end = y + 20 * BOX_HEIGHT;
-			int count = 0;
-			for (; y < cavern_end; y = y + BOX_HEIGHT)
-			{
-				for (int x = 0; x < SCREEN_WIDTH; x = x + BOX_WIDTH)
-				{
-					int x_left = (x - BOX_WIDTH)/BOX_WIDTH;
-					if (x_left < 0)
-					{
-						x_left = 0;
-					}
-
-					int x_right = (x + BOX_WIDTH)/BOX_WIDTH;
-					if (x_right >= SCREEN_WIDTH)
-					{
-						x_right = (SCREEN_WIDTH - BOX_WIDTH)/BOX_WIDTH;
-					}
-
-					//expand cavern size
-					if (count < 5 && (cave_area[(y - BOX_WIDTH)/BOX_WIDTH][x/BOX_WIDTH] == true ||
-					    cave_area[(y - BOX_WIDTH)/BOX_WIDTH][x_left] == true ||
-					    cave_area[(y - BOX_WIDTH)/BOX_WIDTH][x_right] == true))
-					{
-						cave_area[y/BOX_WIDTH][x/BOX_WIDTH] = true;
-					}
-					//keep cavern size constant
-					else if (count >= 5 && count < 15 && cave_area[(y - BOX_WIDTH)/BOX_WIDTH][x/BOX_WIDTH] == true)
-					{
-						cave_area[y/BOX_WIDTH][x/BOX_WIDTH] = true;
-					}
-					//shrink cavern size
-					else if (count >= 15 && count < 20 && (cave_area[(y - BOX_WIDTH)/BOX_WIDTH][x/BOX_WIDTH] == true &&
-					         cave_area[(y - BOX_WIDTH)/BOX_WIDTH][x_left] == true &&
-					         cave_area[(y - BOX_WIDTH)/BOX_WIDTH][x_right] == true))
-					{
-						cave_area[y/BOX_WIDTH][x/BOX_WIDTH] = true;
-					}
-				}
-				count++;
-			}
-			continue;
-		}
-		bool b = true;
-
-		//"start" indicates the relative position of the left wall of the cave to the screen at a given elevation
-		int start = cave_nums[cave_nums_index] - 11;
-
-		//"end" indicates the relative position of the right wall of the cave to the screen at a given elevation
-		int end = cave_nums[cave_nums_index] + 10;
-
-		//for each block at elevation y, compare the relative x position of the block on the screen to the
-		//"start" and "end" positions
-		for (int x = 0; x < SCREEN_WIDTH; x = x + BOX_WIDTH)
-		{
-			//relative x position of the block on the screen
-			int ratio = (float)x / (float)SCREEN_WIDTH * 100;
-
-			//if ratio is between start & end, we are in the cave
-			if (ratio > start && ratio < end)
-			{
-				//indicate that we are in the cave by marking the corresponding location in array as "true"
-				cave_area[y/BOX_WIDTH][x/BOX_WIDTH] = true;
-
-
-				//mark the blocks above and below the current block as being in the cave, to increase width
-				if (y != 0)
-				{
-					int y_above = (y - BOX_WIDTH)/BOX_WIDTH;
-					if (y_above >= 0)
-					{
-						cave_area[y_above][x/BOX_WIDTH] = true;
-					}
-				}
-				if (y != WORLD_HEIGHT - BOX_HEIGHT)
-				{
-					int y_below = (y + BOX_WIDTH)/BOX_WIDTH;
-					if (y_below <= WORLD_HEIGHT/BOX_WIDTH)
-					{
-						cave_area[y_below][x/BOX_WIDTH] = true;
-					}
-				}
+	//compress voxel into block array
+	for(int y = 0; y < map->h; y++){
+		/*
+		for(int x = 0; x < map->w; x++){
+			if(map->field[x][y] >= 100){
+				SDL_Rect rect = {x*BOX_SIZE, y*BOX_SIZE, BOX_SIZE, BOX_SIZE};
+				Block block = Block(rect, 0); //normal block
+				blocks.push_back(block);
 			}
 		}
-
-		cave_nums_index++;
-	}
-
-	int block_type = rand() % 3;
-
-	//use our cave_area array to determine where to render blocks
-	for (int y = 0; y < WORLD_HEIGHT; y = y + BOX_HEIGHT)
-	{
-		if (y % 1000 == 0)
-			block_type = rand() % 3;
-
-		bool b = true;
-		for (int x = 0; x < SCREEN_WIDTH; x = x + BOX_WIDTH)
-		{
-			//create left wall of cave
-			if (cave_area[y/BOX_WIDTH][x/BOX_WIDTH] && b)
-			{
-				SDL_Rect block = {0, y, BOX_WIDTH * (x / BOX_WIDTH), BOX_HEIGHT};
-				Block* bubby = new Block(block, block_type); //normal block
-				//Block* bubby = new Block(block, 1); //icy block
-				//Block* bubby = new Block(block, 2); //bouncy block
-				blocks.push_back(*bubby);
-				//blocks.push_back(block);
-				b = false;
-
-				//spawn the player in at the first available "free" block
-				if (!player_created)
-				{
-					user = new Player(x, y, 20, 20, loadTexture("../res/Guy.png"));
-					player_created = true;
+		*/
+		
+		int sx = 0;
+		int w = 0;
+		int prevtype = -1; //-1 implies air
+		int x = 0;
+		for(; x < map->w; x++){
+			int currtype = map->field[x][y] >= 100 ? map->mat_field[x][y] : -1;
+			
+			if(currtype > -1){
+				if(prevtype==currtype){
+					w++;
+				}else{
+					if(prevtype > -1){
+						SDL_Rect rect = {sx*BOX_SIZE, y*BOX_SIZE, w*BOX_SIZE, BOX_SIZE};
+						Block block = Block(rect, prevtype); //normal block
+						blocks.push_back(block);
+					}
+					sx = x;
+					w = 1;
 				}
+			}else{
+				if(prevtype > -1){
+					SDL_Rect rect = {sx*BOX_SIZE, y*BOX_SIZE, w*BOX_SIZE, BOX_SIZE};
+					Block block = Block(rect, prevtype); //normal block
+					blocks.push_back(block);
+				}
+				w = 0;
 			}
 
-			//create right wall of cave
-			if (!cave_area[y/BOX_WIDTH][x/BOX_WIDTH] && !b)
-			{
-				SDL_Rect block = {x, y, BOX_WIDTH *100, BOX_HEIGHT};
-				Block* bubby = new Block(block, block_type); //normal block
-				//Block* bubby = new Block(block, 1); //icy block
-				//Block* bubby = new Block(block, 2); //bouncy block
-				blocks.push_back(*bubby);
-				//blocks.push_back(block);
-				break;
+			prevtype = currtype;
+			/*
+			if(type==currtype){//grow rect
+				w++;
+			}else if(currtype){//start rect
+				sx = x;
+				w = 0;
+			}else{//end rect
+				SDL_Rect rect = {sx*BOX_SIZE, y*BOX_SIZE, w*BOX_SIZE, BOX_SIZE};
+				Block block = Block(rect, 0); //normal block
+				blocks.push_back(block);
+				w = 0;
+				sx = x;
 			}
-			else if (x == SCREEN_WIDTH - BOX_WIDTH)
-			{
-				SDL_Rect block = {x, y, BOX_WIDTH *100, BOX_HEIGHT};
-				Block* bubby = new Block(block, block_type); //normal block
-				//Block* bubby = new Block(block, 1); //icy block
-				//Block* bubby = new Block(block, 2); //bouncy block
-				blocks.push_back(*bubby);
-				//blocks.push_back(block);
-				break;
-			}
+			type = currtype;
+			*/
 		}
-
-
+		if(prevtype>-1){
+			SDL_Rect rect = {sx*BOX_SIZE, y*BOX_SIZE, w*BOX_SIZE, BOX_SIZE};
+			Block block = Block(rect, prevtype); //normal block
+			blocks.push_back(block);
+		}
+	}
+	std::cout << "size: " << blocks.size() << "\n";
+	std::cout << "size: " << blocks.size() << "\n";
+	for(Block block : blocks){
+		//std::cout << block.block_rect.x << ", " <<  block.block_rect.y << ", " << block.block_rect.w << ", " << block.block_rect.h << "\n";
 	}
 
-	SDL_Rect final_block = {0, WORLD_HEIGHT, BOX_WIDTH *100, BOX_HEIGHT};
-	Block* bubby = new Block(final_block, 3);
-	blocks.push_back(*bubby);
 
-	return user;
+	//spawn player (we need to put this in its own function)
+	return new Player(mg->tubePoints[0].x*BOX_SIZE, mg->tubePoints[0].y*BOX_SIZE, 20, 20, loadTexture("../res/Guy.png"));
 }
 
-
-Player* generateTerrainSeed(int seed)
-{
-	blocks.clear();
-	decorative_blocks.clear();
-
-	srand (seed);
-	int rand (void);
-
-	XorShifter *rng = new XorShifter(412001000);
-
-	SimplexNoise *simp = new SimplexNoise(rand() % 1000000);
-	simp->freq = 0.05f;
-	simp->octaves = 2;
-	simp->updateFractalBounds();
-
-	int cave_nums[WORLD_HEIGHT / BOX_HEIGHT];
-
-
-	//generate values from a "line" of noise, one value for each row of blocks
-	int range = WORLD_HEIGHT/BOX_WIDTH/2;
-	for (int test = -range; test < range; test++)
-	{
-		float val_f = simp->getSingle(1, test) * 100;
-
-		int val_i = (int)val_f;
-
-		cave_nums[test + range] = val_i;
+void renderTerrain(Player* p){
+	int tx = p->x_pos-(1280/2);
+	int ty = p->y_pos-(720/2);
+	for(Block b : blocks){
+		SDL_Rect rect = {b.block_rect.x-tx,b.block_rect.y-ty,b.block_rect.w,b.block_rect.h};
+		SDL_SetRenderDrawColor(screen->renderer, b.red, b.green, b.blue, 0xFF);
+		SDL_RenderFillRect(screen->renderer, &rect);
 	}
-
-	//cave_area is a boolean array that tracks which blocks are part of the walls and which are part of the cave
-	//a value of "true" means that the corresponding block is part of the cave, and will not be rendered
-	bool cave_area[WORLD_HEIGHT/BOX_WIDTH][SCREEN_WIDTH/BOX_WIDTH];
-	for(int i = 0; i < WORLD_HEIGHT/BOX_WIDTH; i++)
-	{
-		for(int j = 0; j < SCREEN_WIDTH/BOX_WIDTH; j++)
-		{
-			cave_area[i][j]=false;
-		}
-	}
-
-	bool player_created = false;
-	Player *user;
-	int cave_nums_index = 0;
-
-	//"gaps" define where the caverns will be placed
-	int gap1 = (rand() % 20) + 20;
-	int gap2 = (rand() % 20) + 70;
-	int gap3 = (rand() % 20) + 120;
-
-	//for each block on the screen
-	for (int y = 0; y < WORLD_HEIGHT; y = y + BOX_HEIGHT)
-	{
-		//place cavern at current location
-		if (y / BOX_HEIGHT == gap1 || y / BOX_HEIGHT == gap2 || y / BOX_HEIGHT == gap3)
-		{
-			//cavern should be 20 boxes tall
-			int cavern_end = y + 20 * BOX_HEIGHT;
-			int count = 0;
-			for (; y < cavern_end; y = y + BOX_HEIGHT)
-			{
-				for (int x = 0; x < SCREEN_WIDTH; x = x + BOX_WIDTH)
-				{
-					int x_left = (x - BOX_WIDTH)/BOX_WIDTH;
-					if (x_left < 0)
-					{
-						x_left = 0;
-					}
-
-					int x_right = (x + BOX_WIDTH)/BOX_WIDTH;
-					if (x_right >= SCREEN_WIDTH)
-					{
-						x_right = (SCREEN_WIDTH - BOX_WIDTH)/BOX_WIDTH;
-					}
-
-					//expand cavern size
-					if (count < 5 && (cave_area[(y - BOX_WIDTH)/BOX_WIDTH][x/BOX_WIDTH] == true ||
-					    cave_area[(y - BOX_WIDTH)/BOX_WIDTH][x_left] == true ||
-					    cave_area[(y - BOX_WIDTH)/BOX_WIDTH][x_right] == true))
-					{
-						cave_area[y/BOX_WIDTH][x/BOX_WIDTH] = true;
-					}
-					//keep cavern size constant
-					else if (count >= 5 && count < 15 && cave_area[(y - BOX_WIDTH)/BOX_WIDTH][x/BOX_WIDTH] == true)
-					{
-						cave_area[y/BOX_WIDTH][x/BOX_WIDTH] = true;
-					}
-					//shrink cavern size
-					else if (count >= 15 && count < 20 && (cave_area[(y - BOX_WIDTH)/BOX_WIDTH][x/BOX_WIDTH] == true &&
-					         cave_area[(y - BOX_WIDTH)/BOX_WIDTH][x_left] == true &&
-					         cave_area[(y - BOX_WIDTH)/BOX_WIDTH][x_right] == true))
-					{
-						cave_area[y/BOX_WIDTH][x/BOX_WIDTH] = true;
-					}
-				}
-				count++;
-			}
-			continue;
-		}
-		bool b = true;
-
-		//"start" indicates the relative position of the left wall of the cave to the screen at a given elevation
-		int start = cave_nums[cave_nums_index] - 11;
-
-		//"end" indicates the relative position of the right wall of the cave to the screen at a given elevation
-		int end = cave_nums[cave_nums_index] + 10;
-
-		//for each block at elevation y, compare the relative x position of the block on the screen to the
-		//"start" and "end" positions
-		for (int x = 0; x < SCREEN_WIDTH; x = x + BOX_WIDTH)
-		{
-			//relative x position of the block on the screen
-			int ratio = (float)x / (float)SCREEN_WIDTH * 100;
-
-			//if ratio is between start & end, we are in the cave
-			if (ratio > start && ratio < end)
-			{
-				//indicate that we are in the cave by marking the corresponding location in array as "true"
-				cave_area[y/BOX_WIDTH][x/BOX_WIDTH] = true;
-
-
-				//mark the blocks above and below the current block as being in the cave, to increase width
-				if (y != 0)
-				{
-					int y_above = (y - BOX_WIDTH)/BOX_WIDTH;
-					if (y_above >= 0)
-					{
-						cave_area[y_above][x/BOX_WIDTH] = true;
-					}
-				}
-				if (y != WORLD_HEIGHT - BOX_HEIGHT)
-				{
-					int y_below = (y + BOX_WIDTH)/BOX_WIDTH;
-					if (y_below <= WORLD_HEIGHT/BOX_WIDTH)
-					{
-						cave_area[y_below][x/BOX_WIDTH] = true;
-					}
-				}
-			}
-		}
-
-		cave_nums_index++;
-	}
-
-	//use our cave_area array to determine where to render blocks
-	for (int y = 0; y < WORLD_HEIGHT; y = y + BOX_HEIGHT)
-	{
-
-		bool b = true;
-		for (int x = 0; x < SCREEN_WIDTH; x = x + BOX_WIDTH)
-		{
-			//create left wall of cave
-			if (cave_area[y/BOX_WIDTH][x/BOX_WIDTH] && b)
-			{
-				SDL_Rect block = {0, y, BOX_WIDTH * (x / BOX_WIDTH), BOX_HEIGHT};
-				Block* bubby = new Block(block, 0); //normal block
-				//Block* bubby = new Block(block, 1); //icy block
-				//Block* bubby = new Block(block, 2); //bouncy block
-				blocks.push_back(*bubby);
-				//blocks.push_back(block);
-				b = false;
-
-				//spawn the player in at the first available "free" block
-				if (!player_created)
-				{
-					user = new Player(x, y, 20, 20, loadTexture("../res/Guy.png"));
-					player_created = true;
-				}
-			}
-
-			//create right wall of cave
-			if (!cave_area[y/BOX_WIDTH][x/BOX_WIDTH] && !b)
-			{
-				SDL_Rect block = {x, y, BOX_WIDTH *100, BOX_HEIGHT};
-				Block* bubby = new Block(block, 0); //normal block
-				//Block* bubby = new Block(block, 1); //icy block
-				//Block* bubby = new Block(block, 2); //bouncy block
-				blocks.push_back(*bubby);
-				//blocks.push_back(block);
-				break;
-			}
-			else if (x == SCREEN_WIDTH - BOX_WIDTH)
-			{
-				SDL_Rect block = {x, y, BOX_WIDTH *100, BOX_HEIGHT};
-				Block* bubby = new Block(block, 0); //normal block
-				//Block* bubby = new Block(block, 1); //icy block
-				//Block* bubby = new Block(block, 2); //bouncy block
-				blocks.push_back(*bubby);
-				//blocks.push_back(block);
-				break;
-			}
-		}
-
-
-	}
-
-	return user;
 }
-
 
 void runCredits()
 {
@@ -627,13 +317,13 @@ void runGame(bool multiplayer)
 		{
 			int seed = 1;
 			seed = atoi(buffer);
-			user = generateTerrainSeed(seed);
+			user = generateTerrain(seed);
 		}
 	}
 	else
 	{
 		//create the player and generate the terrain
-		user = generateTerrain();
+		user = generateTerrain(time(NULL));
 	}
 
 	then = 0;
@@ -746,6 +436,7 @@ void runGame(bool multiplayer)
 		// Draw boxes
 		//SDL_SetRenderDrawColor(screen->renderer, 0xFF, 0x00, 0x00, 0xFF);
 
+		/*OUTDATED RENDERING CODE AND MOVING NEW ONE TO A FUNCTION -Ryan Durkoske
 		if(user->y_screenPos < 720/3 )
 		{
 			user->y_screenPos = user->y_pos;
@@ -765,6 +456,8 @@ void runGame(bool multiplayer)
 				SDL_RenderFillRect(screen->renderer, &(b.block_rect));
 			}
 		}
+		*/
+		renderTerrain(user);
 
 		//collision optimization, only detectcollisions for blocks within a reasonable range that the player would be in.
 		for (auto b: blocks) {
@@ -774,6 +467,7 @@ void runGame(bool multiplayer)
 		}
 
 		user->detectCollisions(optBlocks);
+
 		float mX = 0;
 		float mY = 0;
 
@@ -869,21 +563,10 @@ void runGame(bool multiplayer)
 			std::cout << "Client at position: (" << mX << ", " << mY << ")" << std::endl;
 		}
 
-		SDL_Rect player_rect = {user->x_pos, user->y_screenPos, user->width, user->height};
+		SDL_Rect player_rect = {1280/2, 720/2, user->width, user->height};
 		SDL_RenderCopy(screen->renderer, user->player_texture, NULL, &player_rect);
 		SDL_RenderPresent(screen->renderer);
 	}
-}
-
-void drawOtherPlayers(Player* thisPlayer, float otherPlayerOriginX, float otherPlayerOriginY, int playerNum)
-{
-	float otherPlayerScreenY = thisPlayer->y_screenPos - (thisPlayer->y_pos - otherPlayerOriginY);
-
-	std::string spriteName = "../res/Guy" + std::to_string(playerNum) + std::string(".png");
-	SDL_Rect player = {otherPlayerOriginX, otherPlayerScreenY, thisPlayer->width, thisPlayer->height};
-	std::cout << "Placing player " << playerNum << " at " << otherPlayerOriginX << ", " << otherPlayerScreenY << std::endl;
-	SDL_RenderCopy(screen->renderer, loadTexture((spriteName)), NULL, &player);
-	SDL_RenderPresent(screen->renderer);
 }
 
 void error(const char *msg)
@@ -1150,7 +833,6 @@ void runMenu()
 
 int main(int argc, char **argv)
 {
-
 	// Initialize Game
 	if (!init())
 	{
