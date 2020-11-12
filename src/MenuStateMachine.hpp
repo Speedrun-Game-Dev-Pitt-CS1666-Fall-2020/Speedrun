@@ -1,7 +1,7 @@
 #pragma once
 
 enum MenuState {
-	Single, Credits, MultiL, MultiR
+	Single, Credits, MultiL, MultiR, Seed, JoinGame
 };
 
 enum MenuInput {
@@ -13,7 +13,7 @@ class MenuStateMachine {
 	public:
 		MenuStateMachine();
 		~MenuStateMachine();
-		MenuState processInput(MenuInput x);
+		MenuState processInput(MenuInput x, int menuScreen);
 		MenuState getState();
 	private:
 		MenuState state;

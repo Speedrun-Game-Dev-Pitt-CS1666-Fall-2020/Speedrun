@@ -29,7 +29,7 @@
 #include "Block.h"
 
 #define CREDIT_SIZE 10
-#define MENU_SIZE 3
+#define MENU_SIZE 5
 
 constexpr int SCREEN_WIDTH = 1280;
 constexpr int SCREEN_HEIGHT = 720;
@@ -459,7 +459,15 @@ void runGame(bool multiplayer)
 		*/
 		renderTerrain(user);
 
-		user->detectCollisions(blocks);
+		//collision optimization, only detectcollisions for blocks within a reasonable range that the player would be in.
+		for (auto b: blocks) {
+			if ((sqrt(pow(b.block_rect.x - user->x_pos, 2) + pow(b.block_rect.y - user->y_pos, 2) * 1.0))<100) {
+				optBlocks.push_back(b);
+			}
+		}
+
+		user->detectCollisions(optBlocks);
+
 		float mX = 0;
 		float mY = 0;
 
@@ -692,14 +700,24 @@ void runMenu()
 	// Load in our menu images
 	Image* logo = loadImage("../res/SpeedrunLogo.png", 642, 215);
 	Image* menuBG = loadImage("../res/FadedBackground.png", 1280, 720);
+	Image* seedBG = loadImage("../res/SeedNotice.png", 1280, 720); 
 
 	Image* single = loadImage("../res/MenuSingle.png", 450, 80);
 	Image* credits = loadImage("../res/MenuCredits.png", 450, 80);
 	Image* multi = loadImage("../res/MenuMulti.png", 920, 80);
 
+	Image* seed = loadImage("../res/EnterSeed.png", 450, 80);
+	Image* join = loadImage("../res/JoinGame.png", 450, 80);
+
 	Image* singleSel = loadImage("../res/MenuSingleSelect.png", 450, 80);
 	Image* creditsSel = loadImage("../res/MenuCreditsSelect.png", 450, 80);
 	Image* multiSel = loadImage("../res/MenuMultiSelect.png", 920, 80);
+
+	Image* seedSel = loadImage("../res/EnterSeedSelect.png", 450, 80);
+	Image* joinSel = loadImage("../res/JoinGameSelect.png", 450, 80);
+
+	// A variable representing which menu screen we're on (changes when you hit enter)
+	int menuScreen = 0;
 
 	while (gameon)
 	{
@@ -719,7 +737,7 @@ void runMenu()
 
 			// initialize all buttons to unselected
 			Image* menuState[MENU_SIZE] = {
-				single, credits, multi
+				single, credits, multi, seed, join
 			};
 
 			if (keystate[SDL_SCANCODE_RETURN]) {
@@ -732,12 +750,15 @@ void runMenu()
 						runCredits();
 						break;
 					case MultiL:
+					case MultiR:
+						menuScreen = 1;
+						m.processInput(Up, menuScreen); // force the default menu 1 screen (on Seed)
+						break;
+					case JoinGame:
 						setupMultiplayer();
 						close(clientSocket);
 						break;
-					case MultiR:
-						setupMultiplayer();
-						close(clientSocket);
+					default:
 						break;
 				}
 			}
@@ -745,12 +766,13 @@ void runMenu()
 			else if (keystate[SDL_SCANCODE_A] || keystate[SDL_SCANCODE_LEFT]) { buttonPress = Left; buttonPressed = true; }
 			else if (keystate[SDL_SCANCODE_S] || keystate[SDL_SCANCODE_DOWN]) { buttonPress = Down; buttonPressed = true; }
 			else if (keystate[SDL_SCANCODE_D] || keystate[SDL_SCANCODE_RIGHT]) { buttonPress = Right; buttonPressed = true; }
+			// else if (keystate 1 or numpad 1) { append 1 to seed box }
 
 			// default init the variable to the current state in case a button wasn't pressed
 			MenuState currentState = m.getState();
 			if (buttonPressed) {
 				// update it in accordance with the pressed button
-				currentState = m.processInput(buttonPress);
+				currentState = m.processInput(buttonPress, menuScreen);
 			}
 
 			// switch out unselected for selected on the correct button
@@ -765,6 +787,12 @@ void runMenu()
 				case MultiR:
 					menuState[2] = multiSel;
 					break;
+				case Seed:
+					menuState[3] = seedSel;
+					break;
+				case JoinGame:
+					menuState[4] = joinSel;
+					break;
 			}
 
 			// x position, y position, width, height
@@ -773,12 +801,30 @@ void runMenu()
 			SDL_Rect CreditsButton = {650, 390, 450, 80};
 			SDL_Rect MultiButton = {180, 485, 920, 80};
 
+			SDL_Rect SeedNotice = {363, 600, 554, 77};
+			SDL_Rect SeedLabel = {415, 390, 450, 80};
+			SDL_Rect JoinButton = {415, 485, 450, 80};
+
 			// Render the background first so it's in the back!
 			SDL_RenderCopy(screen->renderer, menuBG->texture, NULL, screen->bounds);
 			SDL_RenderCopy(screen->renderer, logo->texture, NULL, &SpeedrunLogo);
-			SDL_RenderCopy(screen->renderer, menuState[0]->texture, NULL, &SingleButton);
-			SDL_RenderCopy(screen->renderer, menuState[1]->texture, NULL, &CreditsButton);
-			SDL_RenderCopy(screen->renderer, menuState[2]->texture, NULL, &MultiButton);
+
+			switch (menuScreen) {
+				case 0:
+					SDL_RenderCopy(screen->renderer, menuState[0]->texture, NULL, &SingleButton);
+					SDL_RenderCopy(screen->renderer, menuState[1]->texture, NULL, &CreditsButton);
+					SDL_RenderCopy(screen->renderer, menuState[2]->texture, NULL, &MultiButton);
+					break;
+				case 1:
+					SDL_RenderCopy(screen->renderer, seedBG->texture, NULL, &SeedNotice);
+					SDL_RenderCopy(screen->renderer, menuState[3]->texture, NULL, &SeedLabel);
+					SDL_RenderCopy(screen->renderer, menuState[4]->texture, NULL, &JoinButton);
+					break;
+				default:
+					std::cout << "Something went horribly wrong." << std::endl << menuScreen << " is not part of the domain of MenuStateMachine." << std::endl;
+					exit(1);
+					break;
+			}
 
 			SDL_RenderPresent(screen->renderer);
 		}
