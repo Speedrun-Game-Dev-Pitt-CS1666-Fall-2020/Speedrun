@@ -20,4 +20,4 @@ and...
 
 **Make sure you run the executable from inside the `bin` directory!** If you run it from somewhere else, your images may not load (the image paths will be wrong from that location)!
 
-Simply run `make_client` or `make_server`. If you do not have a `bin` and `build` folder, then you must create them.
+Simply run `make -f Makefile_client` or `make -f Makefile_server`. If you do not have a `bin` and `build` folder, then you must create them.
