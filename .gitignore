@@ -1,7 +1,8 @@
 *.exe
 *.dll
-.vscode
 
+.vscode
 bin
 include
 lib
+build
