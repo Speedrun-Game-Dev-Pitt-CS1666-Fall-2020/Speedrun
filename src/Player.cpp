@@ -155,19 +155,31 @@ void Player::handleBouncyBlockCollision(BouncyBlock r)
 {
 
     if(r.x_vel < 0){
-        x_vel = -4;
-        std::cout<<"left"<<std::endl;
+        x_vel += -8;
+        if(x_vel < -4){
+            x_vel = -4;
+        }
+        //std::cout<<"left"<<std::endl;
     }else if(r.x_vel > 0){
-        x_vel = 4;
-        std::cout<<"right"<<std::endl;
+        x_vel += 8;
+        if(x_vel > 4){
+            x_vel = 4;
+        }
+        //std::cout<<"right"<<std::endl;
     }
 
     if(r.y_vel < 0){
-        y_vel = -4;
-        std::cout<<"up"<<std::endl;
+        y_vel += -8;
+        if(y_vel < -18){
+            y_vel = -18;
+        }
+        //std::cout<<"up"<<std::endl;
     }else if(r.y_vel > 0){
-        y_vel = 4;
-        std::cout<<"down"<<std::endl;
+        y_vel += 8;
+        if(y_vel > 18){
+            y_vel = 18;
+        }
+        //std::cout<<"down"<<std::endl;
     }
 
 }
@@ -197,6 +209,10 @@ bool Player::isColliding(SDL_Rect *r)
 void Player::handleCollision(Block r)
 {
     float bounce = 15;
+
+    if(r.block_type == 3){
+        std::cout << "You win!" << std::endl;
+    }
 
     if(r.block_type == 1){
         friction = 0.1;

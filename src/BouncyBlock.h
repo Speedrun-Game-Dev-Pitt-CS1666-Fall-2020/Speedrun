@@ -18,6 +18,8 @@ public:
     int height;
 
     BouncyBlock(float x, float y, int w, int h, float xv, float yv);
+    //~BouncyBlock();
+
     void updatePosition();
 
     void applyForces();
