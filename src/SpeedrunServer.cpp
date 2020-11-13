@@ -62,7 +62,6 @@ int main(int argc, char *argv[]) {
 		error("Error creating socket...");
 	}
 
-
 	// set server socket to allow for multiple connections
 	int option = 1;
     if (setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, (char*) &option, sizeof(option)) < 0) {
@@ -70,7 +69,6 @@ int main(int argc, char *argv[]) {
     }
 
 	// Create our server and client address object
-
 	struct sockaddr_in serverAddress;
 	struct sockaddr_in clientAddress;
 	bzero((char*) &serverAddress, sizeof(serverAddress));
