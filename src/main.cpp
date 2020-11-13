@@ -212,7 +212,6 @@ Player* generateTerrain(int seed)
 				blocks.push_back(block);
 				w = 0;
 				sx = x;
-
 			}
 			type = currtype;
 			*/
@@ -533,8 +532,11 @@ void runGame(bool multiplayer, std::string seed)
 		SDL_SetRenderDrawColor(screen->renderer, 0x00, 0x00, 0x00, 0xFF);
 		SDL_RenderClear(screen->renderer);
 
-		//for all moving blocks, update position and time counter
-		for (int i=0; i<blocks.size(); i++)
+		// Draw boxes
+		//SDL_SetRenderDrawColor(screen->renderer, 0xFF, 0x00, 0x00, 0xFF);
+
+		/*OUTDATED RENDERING CODE AND MOVING NEW ONE TO A FUNCTION -Ryan Durkoske
+		if(user->y_screenPos < 720/3 )
 		{
 			if(blocks.at(i).moving){
 				Block temp = blocks.at(i);
@@ -553,6 +555,8 @@ void runGame(bool multiplayer, std::string seed)
 			temp.detectCollisionsBlock(blocks);
 			bouncyblocks.at(i) = temp;
 		}
+		*/
+		renderTerrain(user);
 
 		user->detectCollisions(blocks);
 		user->detectBouncyBlockCollisions(bouncyblocks);
