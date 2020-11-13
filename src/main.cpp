@@ -15,6 +15,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
+#include <time.h>
 
 // Our headers
 #include "XorShifter.h"
@@ -23,22 +24,23 @@
 #include "Image.h"
 #include "Player.h"
 #include "Block.h"
+#include "BouncyBlock.h"
+
 #include "MenuStateMachine.hpp"
 
 #include "Block.h"
 
 #define CREDIT_SIZE 10
-#define MENU_SIZE 3
+#define MENU_SIZE 5
 
 constexpr int SCREEN_WIDTH = 1280;
 constexpr int SCREEN_HEIGHT = 720;
 
 //for move player tutorial, may move to player object later
-constexpr int BOX_WIDTH = 20;
-constexpr int BOX_HEIGHT = 20;
+constexpr int BOX_SIZE = 20;
 constexpr int WORLD_DEPTH = 7200;
 
-constexpr int WORLD_HEIGHT = 720 * 10 + 20 * BOX_HEIGHT * 3; // 3 caverns, each 20 boxes tall
+constexpr int WORLD_HEIGHT = 720 * 10 + 20 * BOX_SIZE * 3; // 3 caverns, each 20 boxes tall
 
 // Globals
 Screen *screen = nullptr;
@@ -47,20 +49,12 @@ Uint32 then;
 Uint32 delta;
 Uint32 now;
 std::vector <Block> blocks;	//stores collidable blocks
-std::vector <Block> optBlocks;	//stores optimized colliable blocks
+
+
+std::vector <BouncyBlock> bouncyblocks;
+
 std::vector <SDL_Rect> decorative_blocks;	//stores non-collidable blocks
 int clientSocket;	//Socket for connecting to the server
-
-// Function declarations
-bool init();
-void close();
-Image *loadImage(const char *, int, int);
-void runCredits();
-void runGame();
-void runMenu();
-Player* generateTerrain();
-void drawOtherPlayers(Player*, float, float, int);
-SDL_Texture *loadTexture(std::string);
 
 Image *loadImage(const char *src, int w, int h)
 {
@@ -112,416 +106,130 @@ bool init()
 void close()
 {
 	delete screen;
+
 	// Quit SDL subsystems
 	SDL_Quit();
 }
 
-//create blocks, add them to the blocks vector, and return a player at a valid spawn point
-Player* generateTerrain()
+void drawOtherPlayers(Player* thisPlayer, float otherPlayerOriginX, float otherPlayerOriginY, int playerNum)
+{
+	float otherPlayerScreenY = thisPlayer->y_screenPos - (thisPlayer->y_pos - otherPlayerOriginY);
+
+	std::string spriteName = "../res/Guy" + std::to_string(playerNum) + std::string(".png");
+	SDL_Rect player = {(int)otherPlayerOriginX, (int)otherPlayerScreenY, thisPlayer->width, thisPlayer->height};
+	std::cout << "Placing player " << playerNum << " at " << otherPlayerOriginX << ", " << otherPlayerScreenY << std::endl;
+	SDL_RenderCopy(screen->renderer, loadTexture((spriteName)), NULL, &player);
+	SDL_RenderPresent(screen->renderer);
+}
+
+#include "GameMap.h"
+#include "MapGenerator.h"
+
+#define MIN_DENSITY 100
+
+Player* generateTerrain(int seed)
 {
 	blocks.clear();
 	decorative_blocks.clear();
 
-	srand (time(NULL));
-	int rand (void);
+	GameMap* map = new GameMap(seed);
+	MapGenerator* mg = new MapGenerator(map);
 
-	XorShifter *rng = new XorShifter(412001000);
-
-	SimplexNoise *simp = new SimplexNoise(rand() % 1000000);
-	simp->freq = 0.05f;
-	simp->octaves = 2;
-	simp->updateFractalBounds();
-
-	int cave_nums[WORLD_HEIGHT / BOX_HEIGHT];
-
-
-	//generate values from a "line" of noise, one value for each row of blocks
-	int range = WORLD_HEIGHT/BOX_WIDTH/2;
-	for (int test = -range; test < range; test++)
-	{
-		float val_f = simp->getSingle(1, test) * 100;
-
-		int val_i = (int)val_f;
-
-		cave_nums[test + range] = val_i;
-	}
-
-	//cave_area is a boolean array that tracks which blocks are part of the walls and which are part of the cave
-	//a value of "true" means that the corresponding block is part of the cave, and will not be rendered
-	bool cave_area[WORLD_HEIGHT/BOX_WIDTH][SCREEN_WIDTH/BOX_WIDTH];
-	for(int i = 0; i < WORLD_HEIGHT/BOX_WIDTH; i++)
-	{
-		for(int j = 0; j < SCREEN_WIDTH/BOX_WIDTH; j++)
-		{
-			cave_area[i][j]=false;
-		}
-	}
-
-	bool player_created = false;
-	Player *user;
-	int cave_nums_index = 0;
-
-	//"gaps" define where the caverns will be placed
-	int gap1 = (rand() % 20) + 100;
-	int gap2 = (rand() % 20) + 200;
-	int gap3 = (rand() % 20) + 300;
-
-	//for each block on the screen
-	for (int y = 0; y < WORLD_HEIGHT; y = y + BOX_HEIGHT)
-	{
-		//place cavern at current location
-		if (y / BOX_HEIGHT == gap1 || y / BOX_HEIGHT == gap2 || y / BOX_HEIGHT == gap3)
-		{
-			//cavern should be 20 boxes tall
-			int cavern_end = y + 20 * BOX_HEIGHT;
-			int count = 0;
-			for (; y < cavern_end; y = y + BOX_HEIGHT)
-			{
-				for (int x = 0; x < SCREEN_WIDTH; x = x + BOX_WIDTH)
-				{
-					int x_left = (x - BOX_WIDTH)/BOX_WIDTH;
-					if (x_left < 0)
-					{
-						x_left = 0;
-					}
-
-					int x_right = (x + BOX_WIDTH)/BOX_WIDTH;
-					if (x_right >= SCREEN_WIDTH)
-					{
-						x_right = (SCREEN_WIDTH - BOX_WIDTH)/BOX_WIDTH;
-					}
-
-					//expand cavern size
-					if (count < 5 && (cave_area[(y - BOX_WIDTH)/BOX_WIDTH][x/BOX_WIDTH] == true ||
-					    cave_area[(y - BOX_WIDTH)/BOX_WIDTH][x_left] == true ||
-					    cave_area[(y - BOX_WIDTH)/BOX_WIDTH][x_right] == true))
-					{
-						cave_area[y/BOX_WIDTH][x/BOX_WIDTH] = true;
-					}
-					//keep cavern size constant
-					else if (count >= 5 && count < 15 && cave_area[(y - BOX_WIDTH)/BOX_WIDTH][x/BOX_WIDTH] == true)
-					{
-						cave_area[y/BOX_WIDTH][x/BOX_WIDTH] = true;
-					}
-					//shrink cavern size
-					else if (count >= 15 && count < 20 && (cave_area[(y - BOX_WIDTH)/BOX_WIDTH][x/BOX_WIDTH] == true &&
-					         cave_area[(y - BOX_WIDTH)/BOX_WIDTH][x_left] == true &&
-					         cave_area[(y - BOX_WIDTH)/BOX_WIDTH][x_right] == true))
-					{
-						cave_area[y/BOX_WIDTH][x/BOX_WIDTH] = true;
-					}
-				}
-				count++;
-			}
-			continue;
-		}
-		bool b = true;
-
-		//"start" indicates the relative position of the left wall of the cave to the screen at a given elevation
-		int start = cave_nums[cave_nums_index] - 11;
-
-		//"end" indicates the relative position of the right wall of the cave to the screen at a given elevation
-		int end = cave_nums[cave_nums_index] + 10;
-
-		//for each block at elevation y, compare the relative x position of the block on the screen to the
-		//"start" and "end" positions
-		for (int x = 0; x < SCREEN_WIDTH; x = x + BOX_WIDTH)
-		{
-			//relative x position of the block on the screen
-			int ratio = (float)x / (float)SCREEN_WIDTH * 100;
-
-			//if ratio is between start & end, we are in the cave
-			if (ratio > start && ratio < end)
-			{
-				//indicate that we are in the cave by marking the corresponding location in array as "true"
-				cave_area[y/BOX_WIDTH][x/BOX_WIDTH] = true;
-
-
-				//mark the blocks above and below the current block as being in the cave, to increase width
-				if (y != 0)
-				{
-					int y_above = (y - BOX_WIDTH)/BOX_WIDTH;
-					if (y_above >= 0)
-					{
-						cave_area[y_above][x/BOX_WIDTH] = true;
-					}
-				}
-				if (y != WORLD_HEIGHT - BOX_HEIGHT)
-				{
-					int y_below = (y + BOX_WIDTH)/BOX_WIDTH;
-					if (y_below <= WORLD_HEIGHT/BOX_WIDTH)
-					{
-						cave_area[y_below][x/BOX_WIDTH] = true;
-					}
-				}
+	//compress voxel into block array
+	for(int y = 0; y < map->h; y++){
+		/*
+		for(int x = 0; x < map->w; x++){
+			if(map->field[x][y] >= 100){
+				SDL_Rect rect = {x*BOX_SIZE, y*BOX_SIZE, BOX_SIZE, BOX_SIZE};
+				Block block = Block(rect, 0); //normal block
+				blocks.push_back(block);
 			}
 		}
-
-		cave_nums_index++;
-	}
-
-	int block_type = rand() % 3;
-
-	//use our cave_area array to determine where to render blocks
-	for (int y = 0; y < WORLD_HEIGHT; y = y + BOX_HEIGHT)
-	{
-		if (y % 1000 == 0)
-			block_type = rand() % 3;
-
-		bool b = true;
-		for (int x = 0; x < SCREEN_WIDTH; x = x + BOX_WIDTH)
-		{
-			//create left wall of cave
-			if (cave_area[y/BOX_WIDTH][x/BOX_WIDTH] && b)
-			{
-				SDL_Rect block = {0, y, BOX_WIDTH * (x / BOX_WIDTH), BOX_HEIGHT};
-				Block* bubby = new Block(block, block_type); //normal block
-				//Block* bubby = new Block(block, 1); //icy block
-				//Block* bubby = new Block(block, 2); //bouncy block
-				blocks.push_back(*bubby);
-				//blocks.push_back(block);
-				b = false;
-
-				//spawn the player in at the first available "free" block
-				if (!player_created)
-				{
-					user = new Player(x, y, 20, 20, loadTexture("../res/Guy.png"));
-					player_created = true;
+		*/
+		
+		int sx = 0;
+		int w = 0;
+		int prevtype = -1; //-1 implies air
+		int x = 0;
+		for(; x < map->w; x++){
+			int currtype = map->field[x][y] >= 100 ? map->mat_field[x][y] : -1;
+			
+			if(currtype > -1){
+				if(prevtype==currtype){
+					w++;
+				}else{
+					if(prevtype > -1){
+						SDL_Rect rect = {sx*BOX_SIZE, y*BOX_SIZE, w*BOX_SIZE, BOX_SIZE};
+						Block block = Block(rect, prevtype, false, 0, 0); //normal block
+						blocks.push_back(block);
+					}
+					sx = x;
+					w = 1;
 				}
+			}else{
+				if(prevtype > -1){
+					SDL_Rect rect = {sx*BOX_SIZE, y*BOX_SIZE, w*BOX_SIZE, BOX_SIZE};
+					Block block = Block(rect, prevtype, false, 0, 0); //normal block
+					blocks.push_back(block);
+				}
+				w = 0;
 			}
 
-			//create right wall of cave
-			if (!cave_area[y/BOX_WIDTH][x/BOX_WIDTH] && !b)
-			{
-				SDL_Rect block = {x, y, BOX_WIDTH *100, BOX_HEIGHT};
-				Block* bubby = new Block(block, block_type); //normal block
-				//Block* bubby = new Block(block, 1); //icy block
-				//Block* bubby = new Block(block, 2); //bouncy block
-				blocks.push_back(*bubby);
-				//blocks.push_back(block);
-				break;
+			prevtype = currtype;
+			/*
+			if(type==currtype){//grow rect
+				w++;
+			}else if(currtype){//start rect
+				sx = x;
+				w = 0;
+			}else{//end rect
+				SDL_Rect rect = {sx*BOX_SIZE, y*BOX_SIZE, w*BOX_SIZE, BOX_SIZE};
+				Block block = Block(rect, 0); //normal block
+				blocks.push_back(block);
+				w = 0;
+				sx = x;
+
 			}
-			else if (x == SCREEN_WIDTH - BOX_WIDTH)
-			{
-				SDL_Rect block = {x, y, BOX_WIDTH *100, BOX_HEIGHT};
-				Block* bubby = new Block(block, block_type); //normal block
-				//Block* bubby = new Block(block, 1); //icy block
-				//Block* bubby = new Block(block, 2); //bouncy block
-				blocks.push_back(*bubby);
-				//blocks.push_back(block);
-				break;
-			}
+			type = currtype;
+			*/
 		}
 
-
+		if(prevtype>-1){
+			SDL_Rect rect = {sx*BOX_SIZE, y*BOX_SIZE, w*BOX_SIZE, BOX_SIZE};
+			Block block = Block(rect, prevtype, false, 0, 0); //normal block
+			blocks.push_back(block);
+		}
+	}
+	std::cout << "size: " << blocks.size() << "\n";
+	std::cout << "size: " << blocks.size() << "\n";
+	for(Block block : blocks){
+		//std::cout << block.block_rect.x << ", " <<  block.block_rect.y << ", " << block.block_rect.w << ", " << block.block_rect.h << "\n";
 	}
 
-	SDL_Rect final_block = {0, WORLD_HEIGHT, BOX_WIDTH *100, BOX_HEIGHT};
-	Block* bubby = new Block(final_block, 3);
-	blocks.push_back(*bubby);
 
-	return user;
+	//spawn player (we need to put this in its own function)
+	return new Player(mg->tubePoints[0].x*BOX_SIZE, mg->tubePoints[0].y*BOX_SIZE, 20, 20, loadTexture("../res/Guy.png"));
 }
 
-
-Player* generateTerrainSeed(int seed)
-{
-	blocks.clear();
-	decorative_blocks.clear();
-
-	srand (seed);
-	int rand (void);
-
-	XorShifter *rng = new XorShifter(412001000);
-
-	SimplexNoise *simp = new SimplexNoise(rand() % 1000000);
-	simp->freq = 0.05f;
-	simp->octaves = 2;
-	simp->updateFractalBounds();
-
-	int cave_nums[WORLD_HEIGHT / BOX_HEIGHT];
-
-
-	//generate values from a "line" of noise, one value for each row of blocks
-	int range = WORLD_HEIGHT/BOX_WIDTH/2;
-	for (int test = -range; test < range; test++)
-	{
-		float val_f = simp->getSingle(1, test) * 100;
-
-		int val_i = (int)val_f;
-
-		cave_nums[test + range] = val_i;
+void renderTerrain(Player* p){
+	int tx = p->x_pos-(1280/2);
+	int ty = p->y_pos-(720/2);
+	for(Block b : blocks){
+		SDL_Rect rect = {b.block_rect.x-tx,b.block_rect.y-ty,b.block_rect.w,b.block_rect.h};
+		SDL_SetRenderDrawColor(screen->renderer, b.red, b.green, b.blue, 0xFF);
+		SDL_RenderFillRect(screen->renderer, &rect);
 	}
-
-	//cave_area is a boolean array that tracks which blocks are part of the walls and which are part of the cave
-	//a value of "true" means that the corresponding block is part of the cave, and will not be rendered
-	bool cave_area[WORLD_HEIGHT/BOX_WIDTH][SCREEN_WIDTH/BOX_WIDTH];
-	for(int i = 0; i < WORLD_HEIGHT/BOX_WIDTH; i++)
-	{
-		for(int j = 0; j < SCREEN_WIDTH/BOX_WIDTH; j++)
-		{
-			cave_area[i][j]=false;
-		}
-	}
-
-	bool player_created = false;
-	Player *user;
-	int cave_nums_index = 0;
-
-	//"gaps" define where the caverns will be placed
-	int gap1 = (rand() % 20) + 20;
-	int gap2 = (rand() % 20) + 70;
-	int gap3 = (rand() % 20) + 120;
-
-	//for each block on the screen
-	for (int y = 0; y < WORLD_HEIGHT; y = y + BOX_HEIGHT)
-	{
-		//place cavern at current location
-		if (y / BOX_HEIGHT == gap1 || y / BOX_HEIGHT == gap2 || y / BOX_HEIGHT == gap3)
-		{
-			//cavern should be 20 boxes tall
-			int cavern_end = y + 20 * BOX_HEIGHT;
-			int count = 0;
-			for (; y < cavern_end; y = y + BOX_HEIGHT)
-			{
-				for (int x = 0; x < SCREEN_WIDTH; x = x + BOX_WIDTH)
-				{
-					int x_left = (x - BOX_WIDTH)/BOX_WIDTH;
-					if (x_left < 0)
-					{
-						x_left = 0;
-					}
-
-					int x_right = (x + BOX_WIDTH)/BOX_WIDTH;
-					if (x_right >= SCREEN_WIDTH)
-					{
-						x_right = (SCREEN_WIDTH - BOX_WIDTH)/BOX_WIDTH;
-					}
-
-					//expand cavern size
-					if (count < 5 && (cave_area[(y - BOX_WIDTH)/BOX_WIDTH][x/BOX_WIDTH] == true ||
-					    cave_area[(y - BOX_WIDTH)/BOX_WIDTH][x_left] == true ||
-					    cave_area[(y - BOX_WIDTH)/BOX_WIDTH][x_right] == true))
-					{
-						cave_area[y/BOX_WIDTH][x/BOX_WIDTH] = true;
-					}
-					//keep cavern size constant
-					else if (count >= 5 && count < 15 && cave_area[(y - BOX_WIDTH)/BOX_WIDTH][x/BOX_WIDTH] == true)
-					{
-						cave_area[y/BOX_WIDTH][x/BOX_WIDTH] = true;
-					}
-					//shrink cavern size
-					else if (count >= 15 && count < 20 && (cave_area[(y - BOX_WIDTH)/BOX_WIDTH][x/BOX_WIDTH] == true &&
-					         cave_area[(y - BOX_WIDTH)/BOX_WIDTH][x_left] == true &&
-					         cave_area[(y - BOX_WIDTH)/BOX_WIDTH][x_right] == true))
-					{
-						cave_area[y/BOX_WIDTH][x/BOX_WIDTH] = true;
-					}
-				}
-				count++;
-			}
-			continue;
-		}
-		bool b = true;
-
-		//"start" indicates the relative position of the left wall of the cave to the screen at a given elevation
-		int start = cave_nums[cave_nums_index] - 11;
-
-		//"end" indicates the relative position of the right wall of the cave to the screen at a given elevation
-		int end = cave_nums[cave_nums_index] + 10;
-
-		//for each block at elevation y, compare the relative x position of the block on the screen to the
-		//"start" and "end" positions
-		for (int x = 0; x < SCREEN_WIDTH; x = x + BOX_WIDTH)
-		{
-			//relative x position of the block on the screen
-			int ratio = (float)x / (float)SCREEN_WIDTH * 100;
-
-			//if ratio is between start & end, we are in the cave
-			if (ratio > start && ratio < end)
-			{
-				//indicate that we are in the cave by marking the corresponding location in array as "true"
-				cave_area[y/BOX_WIDTH][x/BOX_WIDTH] = true;
-
-
-				//mark the blocks above and below the current block as being in the cave, to increase width
-				if (y != 0)
-				{
-					int y_above = (y - BOX_WIDTH)/BOX_WIDTH;
-					if (y_above >= 0)
-					{
-						cave_area[y_above][x/BOX_WIDTH] = true;
-					}
-				}
-				if (y != WORLD_HEIGHT - BOX_HEIGHT)
-				{
-					int y_below = (y + BOX_WIDTH)/BOX_WIDTH;
-					if (y_below <= WORLD_HEIGHT/BOX_WIDTH)
-					{
-						cave_area[y_below][x/BOX_WIDTH] = true;
-					}
-				}
-			}
-		}
-
-		cave_nums_index++;
-	}
-
-	//use our cave_area array to determine where to render blocks
-	for (int y = 0; y < WORLD_HEIGHT; y = y + BOX_HEIGHT)
-	{
-
-		bool b = true;
-		for (int x = 0; x < SCREEN_WIDTH; x = x + BOX_WIDTH)
-		{
-			//create left wall of cave
-			if (cave_area[y/BOX_WIDTH][x/BOX_WIDTH] && b)
-			{
-				SDL_Rect block = {0, y, BOX_WIDTH * (x / BOX_WIDTH), BOX_HEIGHT};
-				Block* bubby = new Block(block, 0); //normal block
-				//Block* bubby = new Block(block, 1); //icy block
-				//Block* bubby = new Block(block, 2); //bouncy block
-				blocks.push_back(*bubby);
-				//blocks.push_back(block);
-				b = false;
-
-				//spawn the player in at the first available "free" block
-				if (!player_created)
-				{
-					user = new Player(x, y, 20, 20, loadTexture("../res/Guy.png"));
-					player_created = true;
-				}
-			}
-
-			//create right wall of cave
-			if (!cave_area[y/BOX_WIDTH][x/BOX_WIDTH] && !b)
-			{
-				SDL_Rect block = {x, y, BOX_WIDTH *100, BOX_HEIGHT};
-				Block* bubby = new Block(block, 0); //normal block
-				//Block* bubby = new Block(block, 1); //icy block
-				//Block* bubby = new Block(block, 2); //bouncy block
-				blocks.push_back(*bubby);
-				//blocks.push_back(block);
-				break;
-			}
-			else if (x == SCREEN_WIDTH - BOX_WIDTH)
-			{
-				SDL_Rect block = {x, y, BOX_WIDTH *100, BOX_HEIGHT};
-				Block* bubby = new Block(block, 0); //normal block
-				//Block* bubby = new Block(block, 1); //icy block
-				//Block* bubby = new Block(block, 2); //bouncy block
-				blocks.push_back(*bubby);
-				//blocks.push_back(block);
-				break;
-			}
-		}
-
-
-	}
-
-	return user;
 }
 
+void renderBouncies(Player* p){
+	int tx = p->x_pos-(1280/2);
+	int ty = p->y_pos-(720/2);
+	for(BouncyBlock b : bouncyblocks){
+		SDL_Rect rect = {(int)(b.x_pos-tx), (int)(b.y_pos-ty), b.width, b.height};
+		SDL_SetRenderDrawColor(screen->renderer, 0xAA, 0xCC, 0xBB, 0xFF);
+		SDL_RenderFillRect(screen->renderer, &rect);
+	}
+}
 
 void runCredits()
 {
@@ -627,14 +335,40 @@ void runGame(bool multiplayer)
 		{
 			int seed = 1;
 			seed = atoi(buffer);
-			user = generateTerrainSeed(seed);
+			user = generateTerrain(seed);
 		}
 	}
 	else
 	{
 		//create the player and generate the terrain
-		user = generateTerrain();
+		user = generateTerrain(time(NULL));
 	}
+
+	//EXAMPLE moving block!!
+	//spawning near player
+	//Args for block are sdl rect, blocktype, ismoving, speed, timeperiodforchangedirection
+	//normal blocks will just be same thing but ismoving=false, speed=0, time=0
+	//push these onto blocks vector like they are any other block
+	SDL_Rect bee = {(int)user->x_pos, (int)user->y_pos+20, BOX_SIZE*5, BOX_SIZE};
+	Block* hellothere = new Block(bee, 1, true, 1, 80); //normal block
+	blocks.push_back(*hellothere);
+
+	//EXAMPLE bouncy balls!!!
+	//Args are spawnlocX, spawnlocY, width, height, initXVel, initYVel
+	//bouncyblocks vector is already created to be pushed onto
+	BouncyBlock* bouncy = new BouncyBlock(user->x_pos, user->y_pos+20, BOX_SIZE, BOX_SIZE, 2, 2);
+	BouncyBlock* bouncy2 = new BouncyBlock(user->x_pos+20, user->y_pos+20, BOX_SIZE, BOX_SIZE, 3, -1);
+
+	//bouncyblocks is vector that holds bouncy balls
+	//do this within terrain gen wherever u please
+	bouncyblocks.push_back(*bouncy);
+	bouncyblocks.push_back(*bouncy2);
+
+	//Define the blocks
+	/*SDL_Rect block = {SCREEN_WIDTH/2, SCREEN_HEIGHT-20, 200, 20};
+	SDL_Rect anotherBlock = {SCREEN_WIDTH/2 - 190, SCREEN_HEIGHT-120, 120, 20};
+	SDL_Rect spring = {SCREEN_WIDTH/2 - 300, SCREEN_HEIGHT-180, 100, 20};
+	blocks = {block, anotherBlock, spring};*/
 
 	then = 0;
 	bzero(buffer, 256);
@@ -650,12 +384,21 @@ void runGame(bool multiplayer)
 		then = now;
 		user->applyForces();
 
+		//apply forces on all bouncys
+		for (int i=0; i<bouncyblocks.size(); i++)
+		{
+			BouncyBlock temp = bouncyblocks.at(i);
+			temp.applyForces();
+			bouncyblocks.at(i) = temp;
+		}
+
 		//get intended motion based off input
 		SDL_PollEvent(&e);
 
 		const Uint8 *keystate = SDL_GetKeyboardState(nullptr);
 		if (e.type == SDL_QUIT || keystate[SDL_SCANCODE_ESCAPE])
 		{
+			bouncyblocks.clear();
 			gameon = false;
 		}
 		else
@@ -693,6 +436,22 @@ void runGame(bool multiplayer)
 			}
 		}
 		user->updatePosition();
+
+		//move bouncies
+		for (int i=0; i<bouncyblocks.size(); i++)
+		{
+			BouncyBlock temp = bouncyblocks.at(i);
+			temp.updatePosition();
+			bouncyblocks.at(i) = temp;
+		}
+		//if user position on screen < 720/3
+			//then change user position and user position on screen, not blocks.
+		//if user position on screen is > 1440/3
+			//then change user position and user position on screeen, not blocks.
+		//else
+			//change block locations
+		//X, always change X of player and player screen pos, never block
+
 		//check constraints and resolve conflicts
 		//apply forces based off gravity and collisions
 
@@ -743,38 +502,30 @@ void runGame(bool multiplayer)
 		SDL_SetRenderDrawColor(screen->renderer, 0x00, 0x00, 0x00, 0xFF);
 		SDL_RenderClear(screen->renderer);
 
+		//for all moving blocks, update position and time counter
+		for (int i=0; i<blocks.size(); i++)
+		{
+			if(blocks.at(i).moving){
+				Block temp = blocks.at(i);
+				temp.updatePosition();
+				blocks.at(i) = temp;
+			}
+		}
 		// Draw boxes
 		//SDL_SetRenderDrawColor(screen->renderer, 0xFF, 0x00, 0x00, 0xFF);
 
-		if(user->y_screenPos < 720/3 )
+    	renderTerrain(user);
+		//detect collisions for all bouncy blocks
+		for (int i=0; i<bouncyblocks.size(); i++)
 		{
-			user->y_screenPos = user->y_pos;
-			for (auto b: blocks)
-			{
-				// Draw boxes
-				SDL_SetRenderDrawColor(screen->renderer, b.red, b.green, b.blue, 0xFF);
-				SDL_RenderFillRect(screen->renderer, &(b.block_rect));
-			}
-		}
-		else
-		{
-			for (auto b: blocks)
-			{
-				b.block_rect.y -= (user->y_pos-user->y_screenPos);
-				SDL_SetRenderDrawColor(screen->renderer, b.red, b.green, b.blue, 0xFF);
-				SDL_RenderFillRect(screen->renderer, &(b.block_rect));
-			}
+			BouncyBlock temp = bouncyblocks.at(i);
+			temp.detectCollisionsBlock(blocks);
+			bouncyblocks.at(i) = temp;
 		}
 
-		//collision optimization, only detectcollisions for blocks within a reasonable range that the player would be in.
-		for (auto b: blocks){
-			if((sqrt(pow(b.block_rect.x - user->x_pos, 2) + pow(b.block_rect.y - user->y_pos, 2) * 1.0))<100)){
-				optBlocks.push_back(b);
+		user->detectCollisions(blocks);
+		user->detectBouncyBlockCollisions(bouncyblocks);
 
-			}
-		}
-
-		user->detectCollisions(optBlocks);
 		float mX = 0;
 		float mY = 0;
 
@@ -870,21 +621,13 @@ void runGame(bool multiplayer)
 			std::cout << "Client at position: (" << mX << ", " << mY << ")" << std::endl;
 		}
 
-		SDL_Rect player_rect = {user->x_pos, user->y_screenPos, user->width, user->height};
+		renderBouncies(user);
+
+		SDL_Rect player_rect = {1280/2, 720/2, user->width, user->height};
+
 		SDL_RenderCopy(screen->renderer, user->player_texture, NULL, &player_rect);
 		SDL_RenderPresent(screen->renderer);
 	}
-}
-
-void drawOtherPlayers(Player* thisPlayer, float otherPlayerOriginX, float otherPlayerOriginY, int playerNum)
-{
-	float otherPlayerScreenY = thisPlayer->y_screenPos - (thisPlayer->y_pos - otherPlayerOriginY);
-
-	std::string spriteName = "../res/Guy" + std::to_string(playerNum) + std::string(".png");
-	SDL_Rect player = {otherPlayerOriginX, otherPlayerScreenY, thisPlayer->width, thisPlayer->height};
-	std::cout << "Placing player " << playerNum << " at " << otherPlayerOriginX << ", " << otherPlayerScreenY << std::endl;
-	SDL_RenderCopy(screen->renderer, loadTexture((spriteName)), NULL, &player);
-	SDL_RenderPresent(screen->renderer);
 }
 
 void error(const char *msg)
@@ -1018,14 +761,24 @@ void runMenu()
 	// Load in our menu images
 	Image* logo = loadImage("../res/SpeedrunLogo.png", 642, 215);
 	Image* menuBG = loadImage("../res/FadedBackground.png", 1280, 720);
+	Image* seedBG = loadImage("../res/SeedNotice.png", 1280, 720); 
 
 	Image* single = loadImage("../res/MenuSingle.png", 450, 80);
 	Image* credits = loadImage("../res/MenuCredits.png", 450, 80);
 	Image* multi = loadImage("../res/MenuMulti.png", 920, 80);
 
+	Image* seed = loadImage("../res/EnterSeed.png", 450, 80);
+	Image* join = loadImage("../res/JoinGame.png", 450, 80);
+
 	Image* singleSel = loadImage("../res/MenuSingleSelect.png", 450, 80);
 	Image* creditsSel = loadImage("../res/MenuCreditsSelect.png", 450, 80);
 	Image* multiSel = loadImage("../res/MenuMultiSelect.png", 920, 80);
+
+	Image* seedSel = loadImage("../res/EnterSeedSelect.png", 450, 80);
+	Image* joinSel = loadImage("../res/JoinGameSelect.png", 450, 80);
+
+	// A variable representing which menu screen we're on (changes when you hit enter)
+	int menuScreen = 0;
 
 	while (gameon)
 	{
@@ -1045,7 +798,7 @@ void runMenu()
 
 			// initialize all buttons to unselected
 			Image* menuState[MENU_SIZE] = {
-				single, credits, multi
+				single, credits, multi, seed, join
 			};
 
 			if (keystate[SDL_SCANCODE_RETURN]) {
@@ -1058,12 +811,15 @@ void runMenu()
 						runCredits();
 						break;
 					case MultiL:
+					case MultiR:
+						menuScreen = 1;
+						m.processInput(Up, menuScreen); // force the default menu 1 screen (on Seed)
+						break;
+					case JoinGame:
 						setupMultiplayer();
 						close(clientSocket);
 						break;
-					case MultiR:
-						setupMultiplayer();
-						close(clientSocket);
+					default:
 						break;
 				}
 			}
@@ -1071,12 +827,13 @@ void runMenu()
 			else if (keystate[SDL_SCANCODE_A] || keystate[SDL_SCANCODE_LEFT]) { buttonPress = Left; buttonPressed = true; }
 			else if (keystate[SDL_SCANCODE_S] || keystate[SDL_SCANCODE_DOWN]) { buttonPress = Down; buttonPressed = true; }
 			else if (keystate[SDL_SCANCODE_D] || keystate[SDL_SCANCODE_RIGHT]) { buttonPress = Right; buttonPressed = true; }
+			// else if (keystate 1 or numpad 1) { append 1 to seed box }
 
 			// default init the variable to the current state in case a button wasn't pressed
 			MenuState currentState = m.getState();
 			if (buttonPressed) {
 				// update it in accordance with the pressed button
-				currentState = m.processInput(buttonPress);
+				currentState = m.processInput(buttonPress, menuScreen);
 			}
 
 			// switch out unselected for selected on the correct button
@@ -1091,6 +848,12 @@ void runMenu()
 				case MultiR:
 					menuState[2] = multiSel;
 					break;
+				case Seed:
+					menuState[3] = seedSel;
+					break;
+				case JoinGame:
+					menuState[4] = joinSel;
+					break;
 			}
 
 			// x position, y position, width, height
@@ -1099,12 +862,30 @@ void runMenu()
 			SDL_Rect CreditsButton = {650, 390, 450, 80};
 			SDL_Rect MultiButton = {180, 485, 920, 80};
 
+			SDL_Rect SeedNotice = {363, 600, 554, 77};
+			SDL_Rect SeedLabel = {415, 390, 450, 80};
+			SDL_Rect JoinButton = {415, 485, 450, 80};
+
 			// Render the background first so it's in the back!
 			SDL_RenderCopy(screen->renderer, menuBG->texture, NULL, screen->bounds);
 			SDL_RenderCopy(screen->renderer, logo->texture, NULL, &SpeedrunLogo);
-			SDL_RenderCopy(screen->renderer, menuState[0]->texture, NULL, &SingleButton);
-			SDL_RenderCopy(screen->renderer, menuState[1]->texture, NULL, &CreditsButton);
-			SDL_RenderCopy(screen->renderer, menuState[2]->texture, NULL, &MultiButton);
+
+			switch (menuScreen) {
+				case 0:
+					SDL_RenderCopy(screen->renderer, menuState[0]->texture, NULL, &SingleButton);
+					SDL_RenderCopy(screen->renderer, menuState[1]->texture, NULL, &CreditsButton);
+					SDL_RenderCopy(screen->renderer, menuState[2]->texture, NULL, &MultiButton);
+					break;
+				case 1:
+					SDL_RenderCopy(screen->renderer, seedBG->texture, NULL, &SeedNotice);
+					SDL_RenderCopy(screen->renderer, menuState[3]->texture, NULL, &SeedLabel);
+					SDL_RenderCopy(screen->renderer, menuState[4]->texture, NULL, &JoinButton);
+					break;
+				default:
+					std::cout << "Something went horribly wrong." << std::endl << menuScreen << " is not part of the domain of MenuStateMachine." << std::endl;
+					exit(1);
+					break;
+			}
 
 			SDL_RenderPresent(screen->renderer);
 		}
@@ -1113,7 +894,6 @@ void runMenu()
 
 int main(int argc, char **argv)
 {
-
 	// Initialize Game
 	if (!init())
 	{
