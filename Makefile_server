@@ -3,6 +3,7 @@ TARGET_EXEC ?= SpeedrunServer
 BIN_DIR ?= ./bin
 BUILD_DIR ?= ./build
 SRC_DIRS ?= ./src
+MKDIR_P ?= mkdir -p
 
 ALL_SRCS := $(shell find $(SRC_DIRS) -name *.cpp)
 SRCS = $(filter-out $(SRC_DIRS)/main.cpp, $(ALL_SRCS))
@@ -19,13 +20,12 @@ CPPFLAGS ?= $(EXTERNAL_INC_FLAGS) $(INC_FLAGS) -MMD -MP
 
 # link
 $(BIN_DIR)/$(TARGET_EXEC): $(OBJS)
+	[ -d $(dir $@) ] || $(MKDIR_P) $(dir $@)
 	$(CXX) $(OBJS) -o $@ $(LIB_FLAGS) $(LDFLAGS) 
 
 # build src files
 $(BUILD_DIR)/%.cpp.o: %.cpp
-	$(MKDIR_P) $(dir $@)
+	[ -d $(dir $@) ] || $(MKDIR_P) $(dir $@)
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
 
 -include $(DEPS)
-
-MKDIR_P ?= mkdir -p
