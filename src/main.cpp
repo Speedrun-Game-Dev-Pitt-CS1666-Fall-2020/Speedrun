@@ -400,32 +400,6 @@ void runGame(bool multiplayer, std::string seed)
 	SDL_Rect spring = {SCREEN_WIDTH/2 - 300, SCREEN_HEIGHT-180, 100, 20};
 	blocks = {block, anotherBlock, spring};*/
 
-	//EXAMPLE moving block!!
-	//spawning near player
-	//Args for block are sdl rect, blocktype, ismoving, speed, timeperiodforchangedirection
-	//normal blocks will just be same thing but ismoving=false, speed=0, time=0
-	//push these onto blocks vector like they are any other block
-	SDL_Rect bee = {(int)user->x_pos, (int)user->y_pos+20, BOX_SIZE*5, BOX_SIZE};
-	Block* hellothere = new Block(bee, 1, true, 1, 80); //normal block
-	blocks.push_back(*hellothere);
-
-	//EXAMPLE bouncy balls!!!
-	//Args are spawnlocX, spawnlocY, width, height, initXVel, initYVel
-	//bouncyblocks vector is already created to be pushed onto
-	BouncyBlock* bouncy = new BouncyBlock(user->x_pos, user->y_pos+20, BOX_SIZE, BOX_SIZE, 2, 2);
-	BouncyBlock* bouncy2 = new BouncyBlock(user->x_pos+20, user->y_pos+20, BOX_SIZE, BOX_SIZE, 3, -1);
-
-	//bouncyblocks is vector that holds bouncy balls
-	//do this within terrain gen wherever u please
-	bouncyblocks.push_back(*bouncy);
-	bouncyblocks.push_back(*bouncy2);
-
-	//Define the blocks
-	/*SDL_Rect block = {SCREEN_WIDTH/2, SCREEN_HEIGHT-20, 200, 20};
-	SDL_Rect anotherBlock = {SCREEN_WIDTH/2 - 190, SCREEN_HEIGHT-120, 120, 20};
-	SDL_Rect spring = {SCREEN_WIDTH/2 - 300, SCREEN_HEIGHT-180, 100, 20};
-	blocks = {block, anotherBlock, spring};*/
-
 	then = 0;
 	bzero(buffer, 256);
 	SDL_Event e;
