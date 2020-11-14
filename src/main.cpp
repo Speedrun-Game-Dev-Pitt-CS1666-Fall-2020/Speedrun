@@ -26,13 +26,24 @@
 #include "Player.h"
 #include "Block.h"
 #include "BouncyBlock.h"
-
 #include "MenuStateMachine.hpp"
-
 #include "Block.h"
 
+#define MENU_SIZE 8
 #define CREDIT_SIZE 10
-#define MENU_SIZE 5
+
+#define Single_INDEX 0
+#define Credits_INDEX 1
+#define Multi_INDEX 2
+#define SingleSeed_INDEX 3
+#define SingleJoin_INDEX 4
+#define MultiIP_INDEX 5
+#define MultiSeed_INDEX 6
+#define MultiJoin_INDEX 7
+
+#define MAX_IP_LENGTH 15
+#define MAX_SEED_LENGTH 10
+#define NUM_PRESS_DEBOUNCE 15
 
 constexpr int SCREEN_WIDTH = 1280;
 constexpr int SCREEN_HEIGHT = 720;
@@ -265,7 +276,6 @@ void runCredits()
 	simp->updateFractalBounds();
 
 	Image *credits[CREDIT_SIZE] = {
-
 		loadImage("../res/rjd68.png", 800, 600),
 		loadImage("../res/alex.png", 1280, 720),
 		loadImage("../res/andrew.png", 1280, 720),
@@ -275,7 +285,8 @@ void runCredits()
 		loadImage("../res/lucas.png", 1280, 720),
 		loadImage("../res/robert.png", 1280, 720),
 		loadImage("../res/spencer.png", 1280, 720),
-		loadImage("../res/ryanyang.png", 1280, 720)};
+		loadImage("../res/ryanyang.png", 1280, 720)
+	};
 
 	float dt;
 
@@ -785,6 +796,19 @@ void runMultiTestClient()
 	*/
 }
 
+std::string clampSeedString(std::string seedTextContents) {
+	std::string ret = seedTextContents;
+	int seed = atoi(seedTextContents.c_str());
+
+	if (seed < 0) {
+		// there was underflow
+		ret = "2147483647";
+		// set seed to MAX_INT
+	}
+
+	return ret;
+}
+
 void runMenu()
 {
 	SDL_Event e;
@@ -798,28 +822,46 @@ void runMenu()
 	// Load in our menu images
 	Image* logo = loadImage("../res/SpeedrunLogo.png", 642, 215);
 	Image* menuBG = loadImage("../res/FadedBackground.png", 1280, 720);
-	Image* seedBG = loadImage("../res/SeedNotice.png", 1280, 720); 
 
 	Image* single = loadImage("../res/MenuSingle.png", 450, 80);
 	Image* credits = loadImage("../res/MenuCredits.png", 450, 80);
 	Image* multi = loadImage("../res/MenuMulti.png", 920, 80);
-
-	Image* seed = loadImage("../res/EnterSeed.png", 450, 80);
+	Image* textField = loadImage("../res/TextField.png", 450, 80);
 	Image* join = loadImage("../res/JoinGame.png", 450, 80);
 
 	Image* singleSel = loadImage("../res/MenuSingleSelect.png", 450, 80);
 	Image* creditsSel = loadImage("../res/MenuCreditsSelect.png", 450, 80);
 	Image* multiSel = loadImage("../res/MenuMultiSelect.png", 920, 80);
-
-	Image* seedSel = loadImage("../res/EnterSeedSelect.png", 450, 80);
+	Image* textFieldSel = loadImage("../res/TextFieldSelect.png", 450, 80);
 	Image* joinSel = loadImage("../res/JoinGameSelect.png", 450, 80);
 
-	// A variable representing which menu screen we're on (changes when you hit enter)
-	int menuScreen = 0;
+	// Create our image/button positions
+	// x position, y position, width, height
+	SDL_Rect SpeedrunLogo = {319, 96, 642, 215};
+	int labelTextAdjust = 30;
+	int buttonSpaceY = 95; // this has 80px button height baked into it
+
+	// Main Menu
+	SDL_Rect SingleButton = {180, 390, 450, 80};
+	SDL_Rect CreditsButton = {650, 390, 450, 80};
+	SDL_Rect MultiButton = {180, 485, 920, 80};
+
+	// Singleplayer Menu
+	SDL_Rect SingleSeedLabel = {415, 390, 450, 80};
+	SDL_Rect SingleSeedTextBox = {SingleSeedLabel.x + labelTextAdjust/2, SingleSeedLabel.y + labelTextAdjust/2, SingleSeedLabel.w - labelTextAdjust, SingleSeedLabel.h - labelTextAdjust};
+	SDL_Rect SingleJoinButton = {415, SingleSeedLabel.y + buttonSpaceY, 450, 80};
+
+	// Multiplayer Menu
+	SDL_Rect IPLabel = {415, 390, 450, 80};
+	SDL_Rect IPTextBox = {IPLabel.x + labelTextAdjust/2, IPLabel.y + labelTextAdjust/2, IPLabel.w - labelTextAdjust, IPLabel.h - labelTextAdjust};
+	SDL_Rect MultiSeedLabel = {415, IPLabel.y + buttonSpaceY, 450, 80};
+	SDL_Rect MultiSeedTextBox = {MultiSeedLabel.x + labelTextAdjust/2, MultiSeedLabel.y + labelTextAdjust/2, MultiSeedLabel.w - labelTextAdjust, MultiSeedLabel.h - labelTextAdjust};
+	SDL_Rect MultiJoinButton = {415, MultiSeedLabel.y + buttonSpaceY, 450, 80};
 
 	// prepare our seed entering variables
 	SDL_Color black = {0, 0, 0};
 	std::string seedTextContents = "";
+	std::string ipTextContents = "";	
 	int numPressDebounce = 0;
 
 	while (gameon)
@@ -838,38 +880,28 @@ void runMenu()
 			MenuInput buttonPress = (MenuInput)-1;
 			int numButtonPress = -1;
 
+			// This slows down the menu operations
+			if (numPressDebounce > 0) {
+				// We're waiting...
+				numPressDebounce--;
+			}
+
 			// initialize all buttons to unselected
 			Image* menuState[MENU_SIZE] = {
-				single, credits, multi, seed, join
+				single, credits, multi, 
+				textField, join, 
+				textField, textField, join
 			};
-
-			if (keystate[SDL_SCANCODE_RETURN]) {
-				switch (m.getState()) {
-					case Single:
-						runGame(false, "");
-						break;
-					case Credits:
-						before = SDL_GetTicks();
-						runCredits();
-						break;
-					case MultiL:
-					case MultiR:
-						menuScreen = 1;
-						m.processInput(Up, menuScreen); // force the default menu 1 screen (on Seed)
-						break;
-					case JoinGame:
-						setupMultiplayer(seedTextContents);
-						close(clientSocket);
-						break;
-					default:
-						break;
-				}
-			}
-			else if (keystate[SDL_SCANCODE_W] || keystate[SDL_SCANCODE_UP]) { buttonPress = Up; }
+			
+			// Check for menu operations
+			if (keystate[SDL_SCANCODE_W] || keystate[SDL_SCANCODE_UP]) { buttonPress = Up; }
 			else if (keystate[SDL_SCANCODE_A] || keystate[SDL_SCANCODE_LEFT]) { buttonPress = Left; }
 			else if (keystate[SDL_SCANCODE_S] || keystate[SDL_SCANCODE_DOWN]) { buttonPress = Down; }
 			else if (keystate[SDL_SCANCODE_D] || keystate[SDL_SCANCODE_RIGHT]) { buttonPress = Right; }
+			else if (keystate[SDL_SCANCODE_RETURN] || keystate[SDL_SCANCODE_KP_ENTER]) { buttonPress = Enter; }
+			else if (keystate[SDL_SCANCODE_ESCAPE]) { buttonPress = Esc; }
 
+			// Check for text operations
 			else if (keystate[SDL_SCANCODE_0] || keystate[SDL_SCANCODE_KP_0]) { numButtonPress = 0; }
 			else if (keystate[SDL_SCANCODE_1] || keystate[SDL_SCANCODE_KP_1]) { numButtonPress = 1; }
 			else if (keystate[SDL_SCANCODE_2] || keystate[SDL_SCANCODE_KP_2]) { numButtonPress = 2; }
@@ -881,29 +913,55 @@ void runMenu()
 			else if (keystate[SDL_SCANCODE_8] || keystate[SDL_SCANCODE_KP_8]) { numButtonPress = 8; }
 			else if (keystate[SDL_SCANCODE_9] || keystate[SDL_SCANCODE_KP_9]) { numButtonPress = 9; }
 			else if (keystate[SDL_SCANCODE_BACKSPACE] || keystate[SDL_SCANCODE_KP_BACKSPACE]) { numButtonPress = -2; }
+			else if (keystate[SDL_SCANCODE_PERIOD] || keystate[SDL_SCANCODE_KP_PERIOD]) { numButtonPress = -3; }
 
-			// default init the variable to the current state in case a button wasn't pressed
+			// initialize the variable to the current state in case a button wasn't pressed
 			MenuState currentState = m.getState();
 			if (buttonPress != -1) {
 				// update it in accordance with the pressed button
-				currentState = m.processInput(buttonPress, menuScreen);
+				if (numPressDebounce <= 0) {
+					currentState = m.processInput(buttonPress);
+				}
 			}
-			numPressDebounce--;
+			if (buttonPress == Enter) {
+				switch (m.getState()) {
+					case Credits:
+						before = SDL_GetTicks();
+						runCredits();
+						break;
+					// Singleplayer
+					case StartGame:
+						seedTextContents = clampSeedString(seedTextContents);
+						runGame(false, seedTextContents);
+						break;
+					// Multiplayer
+					case JoinGame:
+						seedTextContents = clampSeedString(seedTextContents);
+						setupMultiplayer(seedTextContents);
+						close(clientSocket);
+						break;
+					default:
+						break;
+				}
+			}
 			
 			// switch out unselected for selected on the correct button
 			switch (currentState) {
+				// Main Menu
 				case Single:
-					menuState[0] = singleSel;
+					menuState[Single_INDEX] = singleSel;
 					break;
 				case Credits:
-					menuState[1] = creditsSel;
+					menuState[Credits_INDEX] = creditsSel;
 					break;
 				case MultiL:
 				case MultiR:
-					menuState[2] = multiSel;
+					menuState[Multi_INDEX] = multiSel;
 					break;
-				case Seed:
-					menuState[3] = seedSel;
+
+				// Singleplayer Menu
+				case SingleSeed:
+					menuState[SingleSeed_INDEX] = textFieldSel;
 					// add number to the seed string!
 					if (numPressDebounce <= 0 && numButtonPress != -1) {
 						if (numButtonPress == -2) {
@@ -911,53 +969,109 @@ void runMenu()
 							if (seedTextContents != "") {
 								seedTextContents.pop_back();
 							}
-						} else {
+						} else if (numButtonPress >= 0) {
 							// NUMBER!
-							if (seedTextContents.length() != 5) {
+							if (seedTextContents.length() != MAX_SEED_LENGTH) {
 								seedTextContents += std::to_string(numButtonPress);
 							}
 						}
-						numPressDebounce = 15;
+						numPressDebounce = NUM_PRESS_DEBOUNCE;
+					}
+					break;
+				case StartGame:
+					menuState[SingleJoin_INDEX] = joinSel;
+					break;
+
+				// Multiplayer Menu
+				case IP:
+					menuState[MultiIP_INDEX] = textFieldSel;
+					// add character to the IP string
+					if (numPressDebounce <= 0 && numButtonPress != -1) {
+						if (numButtonPress == -2) {
+							// BACKSPACE!
+							if (ipTextContents != "") {
+								ipTextContents.pop_back();
+							}
+						} else if (numButtonPress >= 0) {
+							// NUMBER!
+							if (ipTextContents.length() != MAX_IP_LENGTH) {
+								ipTextContents += std::to_string(numButtonPress);
+							}
+						} else if (numButtonPress == -3) {
+							// PERIOD!
+							if (ipTextContents.length() != MAX_IP_LENGTH) {
+								ipTextContents += ".";
+							}
+						}
+						numPressDebounce = NUM_PRESS_DEBOUNCE;
+					}
+					break;
+				case MultiSeed:
+					menuState[MultiSeed_INDEX] = textFieldSel;
+					// add number to the seed string!
+					if (numPressDebounce <= 0 && numButtonPress != -1) {
+						if (numButtonPress == -2) {
+							// BACKSPACE!
+							if (seedTextContents != "") {
+								seedTextContents.pop_back();
+							}
+						} else if (numButtonPress >= 0) {
+							// NUMBER!
+							if (seedTextContents.length() != MAX_SEED_LENGTH) {
+								seedTextContents += std::to_string(numButtonPress);
+							}
+						}
+						numPressDebounce = NUM_PRESS_DEBOUNCE;
+					}
+					if (numPressDebounce <= 0 && buttonPress != -1) {
+						// This button press caused us to arrive at this state, meaning we're going up or down the button ladder
+						numPressDebounce = NUM_PRESS_DEBOUNCE;
 					}
 					break;
 				case JoinGame:
-					menuState[4] = joinSel;
+					menuState[MultiJoin_INDEX] = joinSel;
 					break;
 			}
-
-			// x position, y position, width, height
-			SDL_Rect SpeedrunLogo = {319, 96, 642, 215};
-			SDL_Rect SingleButton = {180, 390, 450, 80};
-			SDL_Rect CreditsButton = {650, 390, 450, 80};
-			SDL_Rect MultiButton = {180, 485, 920, 80};
-
-			SDL_Rect SeedNotice = {363, 600, 554, 77};
-			SDL_Rect SeedLabel = {415, 390, 450, 80};
-			int seedTextAdjust = 30;
-			SDL_Rect textBox = {SeedLabel.x + seedTextAdjust/2, SeedLabel.y + seedTextAdjust/2, SeedLabel.w - seedTextAdjust, SeedLabel.h - seedTextAdjust};
-			SDL_Rect JoinButton = {415, 485, 450, 80};
 
 			// Render the background first so it's in the back!
 			SDL_RenderCopy(screen->renderer, menuBG->texture, NULL, screen->bounds);
 			SDL_RenderCopy(screen->renderer, logo->texture, NULL, &SpeedrunLogo);
 
-			switch (menuScreen) {
-				case 0: {
-					SDL_RenderCopy(screen->renderer, menuState[0]->texture, NULL, &SingleButton);
-					SDL_RenderCopy(screen->renderer, menuState[1]->texture, NULL, &CreditsButton);
-					SDL_RenderCopy(screen->renderer, menuState[2]->texture, NULL, &MultiButton);
-					break; }
-				case 1: {
-					SDL_RenderCopy(screen->renderer, seedBG->texture, NULL, &SeedNotice);
-					SDL_RenderCopy(screen->renderer, menuState[3]->texture, NULL, &SeedLabel);
-					SDL_RenderCopy(screen->renderer, menuState[4]->texture, NULL, &JoinButton);
-					SDL_Texture* textTex = loadText(bungeeFont, black, seedTextContents);
-					SDL_RenderCopy(screen->renderer, textTex, NULL, &textBox);
-					break; }
-				default: {
-					std::cout << "Something went horribly wrong." << std::endl << menuScreen << " is not part of the domain of MenuStateMachine." << std::endl;
-					exit(1);
-					break; }
+			// Added scope to each case because the compiler was err-ing for some reason
+			switch (currentState) {
+				case Single:
+				case Credits:
+				case MultiL:
+				case MultiR: {
+					SDL_RenderCopy(screen->renderer, menuState[Single_INDEX]->texture, NULL, &SingleButton);
+					SDL_RenderCopy(screen->renderer, menuState[Credits_INDEX]->texture, NULL, &CreditsButton);
+					SDL_RenderCopy(screen->renderer, menuState[Multi_INDEX]->texture, NULL, &MultiButton);
+					break;
+				} 
+
+				case SingleSeed:
+				case StartGame: {
+					SDL_RenderCopy(screen->renderer, menuState[SingleSeed_INDEX]->texture, NULL, &SingleSeedLabel);
+					SDL_Texture* seedTextTexture = loadText(bungeeFont, black, seedTextContents);
+					SDL_RenderCopy(screen->renderer, seedTextTexture, NULL, &SingleSeedTextBox);
+					SDL_RenderCopy(screen->renderer, menuState[SingleJoin_INDEX]->texture, NULL, &SingleJoinButton);
+					break;
+				}
+
+				case IP:
+				case MultiSeed:
+				case JoinGame: {
+					SDL_RenderCopy(screen->renderer, menuState[MultiIP_INDEX]->texture, NULL, &IPLabel);
+					SDL_Texture* ipTextTexture = loadText(bungeeFont, black, ipTextContents);
+					SDL_RenderCopy(screen->renderer, ipTextTexture, NULL, &IPTextBox);
+
+					SDL_RenderCopy(screen->renderer, menuState[MultiSeed_INDEX]->texture, NULL, &MultiSeedLabel);
+					SDL_Texture* seedTextTexture = loadText(bungeeFont, black, seedTextContents);
+					SDL_RenderCopy(screen->renderer, seedTextTexture, NULL, &MultiSeedTextBox);
+
+					SDL_RenderCopy(screen->renderer, menuState[MultiJoin_INDEX]->texture, NULL, &MultiJoinButton);
+					break;
+				}
 			}
 
 			SDL_RenderPresent(screen->renderer);
