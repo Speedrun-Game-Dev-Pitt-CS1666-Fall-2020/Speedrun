@@ -5,6 +5,7 @@
 #include <time.h>
 #include <SDL.h>
 #include <SDL_image.h>
+#include <SDL_ttf.h> // https://www.libsdl.org/projects/SDL_ttf/docs/SDL_ttf.html
 
 // Networking stuffs
 #include <stdio.h>
@@ -25,13 +26,24 @@
 #include "Player.h"
 #include "Block.h"
 #include "BouncyBlock.h"
-
 #include "MenuStateMachine.hpp"
-
 #include "Block.h"
 
+#define MENU_SIZE 8
 #define CREDIT_SIZE 10
-#define MENU_SIZE 5
+
+#define Single_INDEX 0
+#define Credits_INDEX 1
+#define Multi_INDEX 2
+#define SingleSeed_INDEX 3
+#define SingleJoin_INDEX 4
+#define MultiIP_INDEX 5
+#define MultiSeed_INDEX 6
+#define MultiJoin_INDEX 7
+
+#define MAX_IP_LENGTH 15
+#define MAX_SEED_LENGTH 10
+#define NUM_PRESS_DEBOUNCE 15
 
 constexpr int SCREEN_WIDTH = 1280;
 constexpr int SCREEN_HEIGHT = 720;
@@ -49,19 +61,17 @@ Uint32 then;
 Uint32 delta;
 Uint32 now;
 std::vector <Block> blocks;	//stores collidable blocks
-
-
 std::vector <BouncyBlock> bouncyblocks;
-
 std::vector <SDL_Rect> decorative_blocks;	//stores non-collidable blocks
 int clientSocket;	//Socket for connecting to the server
+TTF_Font* bungeeFont; // the game's font
 
 Image *loadImage(const char *src, int w, int h)
 {
 	return new Image(screen, src, 0, 0, w, h);
 }
 
-SDL_Texture *loadTexture(std::string fname)
+SDL_Texture* loadTexture(std::string fname)
 {
 	SDL_Texture *newText = nullptr;
 
@@ -83,6 +93,20 @@ SDL_Texture *loadTexture(std::string fname)
 	return newText;
 }
 
+SDL_Texture* loadText(TTF_Font* font, SDL_Color color, std::string text) {
+	if (text != "") {
+		SDL_Surface* text_surface;
+		if(!(text_surface = TTF_RenderText_Solid(font, text.c_str(), color))) {
+			std::cerr << "Somehing went wrong while writing text... " << TTF_GetError() << std::endl;
+		} else {
+			SDL_Texture* newText = SDL_CreateTextureFromSurface(screen->renderer, text_surface);
+			SDL_FreeSurface(text_surface);
+			return newText;
+		}
+	}
+	return NULL;
+}
+
 bool init()
 {
 
@@ -97,6 +121,15 @@ bool init()
 		std::cerr << "Failed to initialize SDL_image" << std::endl;
 		return false;
 	}
+	if (TTF_Init() == -1) {
+		std::cerr << "TTF_Init: " << TTF_GetError() << "\n";
+		return false;
+	}
+	bungeeFont = TTF_OpenFont("../res/Bungee.ttf", 16);
+	if (!bungeeFont) {
+		std::cerr << "TTF_OpenFont Error: " << TTF_GetError() << "\n";
+		return false;
+	}
 
 	then = SDL_GetTicks();
 
@@ -109,6 +142,8 @@ void close()
 
 	// Quit SDL subsystems
 	SDL_Quit();
+	IMG_Quit();
+	TTF_Quit();
 }
 
 void drawOtherPlayers(Player* thisPlayer, float otherPlayerOriginX, float otherPlayerOriginY, int playerNum)
@@ -241,7 +276,6 @@ void runCredits()
 	simp->updateFractalBounds();
 
 	Image *credits[CREDIT_SIZE] = {
-
 		loadImage("../res/rjd68.png", 800, 600),
 		loadImage("../res/alex.png", 1280, 720),
 		loadImage("../res/andrew.png", 1280, 720),
@@ -251,7 +285,8 @@ void runCredits()
 		loadImage("../res/lucas.png", 1280, 720),
 		loadImage("../res/robert.png", 1280, 720),
 		loadImage("../res/spencer.png", 1280, 720),
-		loadImage("../res/ryanyang.png", 1280, 720)};
+		loadImage("../res/ryanyang.png", 1280, 720)
+	};
 
 	float dt;
 
@@ -301,48 +336,54 @@ void runCredits()
 	}
 }
 
-void runGame(bool multiplayer)
+void runGame(bool multiplayer, std::string seed)
 {
-	// Create player object with x, y, w, h, texture
-	//Player *user = new Player(10, 0, 20, 20, loadTexture("../res/Guy.png"));
-
+	// Declare player object, to be initialized with new Player(x, y, w, h, texture)
 	Player *user = NULL;
+
+	// our buffer for interacting with the server, requires method scope
 	char buffer[256];
 	bzero(buffer, 256);
 
-	if(multiplayer)
-	{
-		srand(time(NULL));
-		int rand (void);
+	// seed our randomness
+	srand(time(NULL));
+	int rand (void);
 
-		bzero(buffer, 256);
-		int lR = sprintf(buffer, "%i", (rand() + 2));
+	// assigning our seed
+	int seedAsInt = -1;
+	if (seed != "") {
+		// convert seed to int
+		seedAsInt = atoi(seed.c_str());
+		std::cout << "Seed provided and atoi'd = " << seedAsInt << std::endl;
+	} else {
+		// create our own seed
+		seedAsInt = (rand() + 2);
+		std::cout << "Seed generated on its own = " << seedAsInt << std::endl;
+	}
+	std::cout << "Initial seed assignment = " << seedAsInt << std::endl;
+
+	// This is a multiplayer game, network the seed
+	if (multiplayer) {
+		// put the seed in the buffer so we can send it to the server
+		sprintf(buffer, "%i", seedAsInt);
 		int n = write(clientSocket, buffer, strlen(buffer));
-
-		if (n < 0)
-		{
-			herror("Error writing random number to server...");
+		if (n < 0) {
+			herror("Error writing seed to server...\n");
 		}
 
 		bzero(buffer, 256);
 		n = read(clientSocket, buffer, 255);
-
-		if (n < 0)
-		{
-			herror("ERROR reading from socket");
-		}
-		else
-		{
-			int seed = 1;
-			seed = atoi(buffer);
-			user = generateTerrain(seed);
+		if (n < 0) {
+			herror("Error reading from the server...\n");
+		} else {
+			printf("These are the buffer contents:\n%s\n\n", buffer);
+			seedAsInt = atoi(buffer);
+			std::cout << "Seed atoi'd from the server = " << seedAsInt << std::endl;
 		}
 	}
-	else
-	{
-		//create the player and generate the terrain
-		user = generateTerrain(time(NULL));
-	}
+	// finally generated the terrain with this seed
+	std::cout << "Seed being used for generation = " << seedAsInt << std::endl;
+	user = generateTerrain(seedAsInt);
 
 	//EXAMPLE moving block!!
 	//spawning near player
@@ -374,9 +415,10 @@ void runGame(bool multiplayer)
 	bzero(buffer, 256);
 	SDL_Event e;
 	bool gameon = true;
+	SDL_Color white = {255, 255, 255};
 	while (gameon)
 	{
-    now = SDL_GetTicks();
+    	now = SDL_GetTicks();
 
 		if (now - then < 16)
 			continue;
@@ -501,7 +543,7 @@ void runGame(bool multiplayer)
 		// Clear black
 		SDL_SetRenderDrawColor(screen->renderer, 0x00, 0x00, 0x00, 0xFF);
 		SDL_RenderClear(screen->renderer);
-
+ 
 		//for all moving blocks, update position and time counter
 		for (int i=0; i<blocks.size(); i++)
 		{
@@ -623,9 +665,15 @@ void runGame(bool multiplayer)
 
 		renderBouncies(user);
 
+		// Render Player
 		SDL_Rect player_rect = {1280/2, 720/2, user->width, user->height};
-
 		SDL_RenderCopy(screen->renderer, user->player_texture, NULL, &player_rect);
+
+		// Render Seed
+		SDL_Rect textBox = {5, 5, 420, 50};
+		SDL_Texture* textTex = loadText(bungeeFont, white, std::to_string(seedAsInt));
+		SDL_RenderCopy(screen->renderer, textTex, NULL, &textBox);
+
 		SDL_RenderPresent(screen->renderer);
 	}
 }
@@ -636,7 +684,7 @@ void error(const char *msg)
     exit(1);
 }
 
-void setupMultiplayer()
+void setupMultiplayer(std::string seed)
 {
 
 	const char* hostName = "localhost";
@@ -669,7 +717,7 @@ void setupMultiplayer()
 		error("Error connecting to server");
 	}
 
-	runGame(true);
+	runGame(true, seed);
 
 }
 
@@ -748,6 +796,19 @@ void runMultiTestClient()
 	*/
 }
 
+std::string clampSeedString(std::string seedTextContents) {
+	std::string ret = seedTextContents;
+	int seed = atoi(seedTextContents.c_str());
+
+	if (seed < 0) {
+		// there was underflow
+		ret = "2147483647";
+		// set seed to MAX_INT
+	}
+
+	return ret;
+}
+
 void runMenu()
 {
 	SDL_Event e;
@@ -761,24 +822,47 @@ void runMenu()
 	// Load in our menu images
 	Image* logo = loadImage("../res/SpeedrunLogo.png", 642, 215);
 	Image* menuBG = loadImage("../res/FadedBackground.png", 1280, 720);
-	Image* seedBG = loadImage("../res/SeedNotice.png", 1280, 720); 
 
 	Image* single = loadImage("../res/MenuSingle.png", 450, 80);
 	Image* credits = loadImage("../res/MenuCredits.png", 450, 80);
 	Image* multi = loadImage("../res/MenuMulti.png", 920, 80);
-
-	Image* seed = loadImage("../res/EnterSeed.png", 450, 80);
+	Image* textField = loadImage("../res/TextField.png", 450, 80);
 	Image* join = loadImage("../res/JoinGame.png", 450, 80);
 
 	Image* singleSel = loadImage("../res/MenuSingleSelect.png", 450, 80);
 	Image* creditsSel = loadImage("../res/MenuCreditsSelect.png", 450, 80);
 	Image* multiSel = loadImage("../res/MenuMultiSelect.png", 920, 80);
-
-	Image* seedSel = loadImage("../res/EnterSeedSelect.png", 450, 80);
+	Image* textFieldSel = loadImage("../res/TextFieldSelect.png", 450, 80);
 	Image* joinSel = loadImage("../res/JoinGameSelect.png", 450, 80);
 
-	// A variable representing which menu screen we're on (changes when you hit enter)
-	int menuScreen = 0;
+	// Create our image/button positions
+	// x position, y position, width, height
+	SDL_Rect SpeedrunLogo = {319, 96, 642, 215};
+	int labelTextAdjust = 30;
+	int buttonSpaceY = 95; // this has 80px button height baked into it
+
+	// Main Menu
+	SDL_Rect SingleButton = {180, 390, 450, 80};
+	SDL_Rect CreditsButton = {650, 390, 450, 80};
+	SDL_Rect MultiButton = {180, 485, 920, 80};
+
+	// Singleplayer Menu
+	SDL_Rect SingleSeedLabel = {415, 390, 450, 80};
+	SDL_Rect SingleSeedTextBox = {SingleSeedLabel.x + labelTextAdjust/2, SingleSeedLabel.y + labelTextAdjust/2, SingleSeedLabel.w - labelTextAdjust, SingleSeedLabel.h - labelTextAdjust};
+	SDL_Rect SingleJoinButton = {415, SingleSeedLabel.y + buttonSpaceY, 450, 80};
+
+	// Multiplayer Menu
+	SDL_Rect IPLabel = {415, 390, 450, 80};
+	SDL_Rect IPTextBox = {IPLabel.x + labelTextAdjust/2, IPLabel.y + labelTextAdjust/2, IPLabel.w - labelTextAdjust, IPLabel.h - labelTextAdjust};
+	SDL_Rect MultiSeedLabel = {415, IPLabel.y + buttonSpaceY, 450, 80};
+	SDL_Rect MultiSeedTextBox = {MultiSeedLabel.x + labelTextAdjust/2, MultiSeedLabel.y + labelTextAdjust/2, MultiSeedLabel.w - labelTextAdjust, MultiSeedLabel.h - labelTextAdjust};
+	SDL_Rect MultiJoinButton = {415, MultiSeedLabel.y + buttonSpaceY, 450, 80};
+
+	// prepare our seed entering variables
+	SDL_Color black = {0, 0, 0};
+	std::string seedTextContents = "";
+	std::string ipTextContents = "";	
+	int numPressDebounce = 0;
 
 	while (gameon)
 	{
@@ -793,98 +877,201 @@ void runMenu()
 		if (menuon)
 		{
 			const Uint8 *keystate = SDL_GetKeyboardState(nullptr);
-			bool buttonPressed = false;
-			MenuInput buttonPress;
+			MenuInput buttonPress = (MenuInput)-1;
+			int numButtonPress = -1;
+
+			// This slows down the menu operations
+			if (numPressDebounce > 0) {
+				// We're waiting...
+				numPressDebounce--;
+			}
 
 			// initialize all buttons to unselected
 			Image* menuState[MENU_SIZE] = {
-				single, credits, multi, seed, join
+				single, credits, multi, 
+				textField, join, 
+				textField, textField, join
 			};
+			
+			// Check for menu operations
+			if (keystate[SDL_SCANCODE_W] || keystate[SDL_SCANCODE_UP]) { buttonPress = Up; }
+			else if (keystate[SDL_SCANCODE_A] || keystate[SDL_SCANCODE_LEFT]) { buttonPress = Left; }
+			else if (keystate[SDL_SCANCODE_S] || keystate[SDL_SCANCODE_DOWN]) { buttonPress = Down; }
+			else if (keystate[SDL_SCANCODE_D] || keystate[SDL_SCANCODE_RIGHT]) { buttonPress = Right; }
+			else if (keystate[SDL_SCANCODE_RETURN] || keystate[SDL_SCANCODE_KP_ENTER]) { buttonPress = Enter; }
+			else if (keystate[SDL_SCANCODE_ESCAPE]) { buttonPress = Esc; }
 
-			if (keystate[SDL_SCANCODE_RETURN]) {
+			// Check for text operations
+			else if (keystate[SDL_SCANCODE_0] || keystate[SDL_SCANCODE_KP_0]) { numButtonPress = 0; }
+			else if (keystate[SDL_SCANCODE_1] || keystate[SDL_SCANCODE_KP_1]) { numButtonPress = 1; }
+			else if (keystate[SDL_SCANCODE_2] || keystate[SDL_SCANCODE_KP_2]) { numButtonPress = 2; }
+			else if (keystate[SDL_SCANCODE_3] || keystate[SDL_SCANCODE_KP_3]) { numButtonPress = 3; }
+			else if (keystate[SDL_SCANCODE_4] || keystate[SDL_SCANCODE_KP_4]) { numButtonPress = 4; }
+			else if (keystate[SDL_SCANCODE_5] || keystate[SDL_SCANCODE_KP_5]) { numButtonPress = 5; }
+			else if (keystate[SDL_SCANCODE_6] || keystate[SDL_SCANCODE_KP_6]) { numButtonPress = 6; }
+			else if (keystate[SDL_SCANCODE_7] || keystate[SDL_SCANCODE_KP_7]) { numButtonPress = 7; }
+			else if (keystate[SDL_SCANCODE_8] || keystate[SDL_SCANCODE_KP_8]) { numButtonPress = 8; }
+			else if (keystate[SDL_SCANCODE_9] || keystate[SDL_SCANCODE_KP_9]) { numButtonPress = 9; }
+			else if (keystate[SDL_SCANCODE_BACKSPACE] || keystate[SDL_SCANCODE_KP_BACKSPACE]) { numButtonPress = -2; }
+			else if (keystate[SDL_SCANCODE_PERIOD] || keystate[SDL_SCANCODE_KP_PERIOD]) { numButtonPress = -3; }
+
+			// initialize the variable to the current state in case a button wasn't pressed
+			MenuState currentState = m.getState();
+			if (buttonPress != -1) {
+				// update it in accordance with the pressed button
+				if (numPressDebounce <= 0) {
+					currentState = m.processInput(buttonPress);
+				}
+			}
+			if (buttonPress == Enter) {
 				switch (m.getState()) {
-					case Single:
-						runGame(false);
-						break;
 					case Credits:
 						before = SDL_GetTicks();
 						runCredits();
 						break;
-					case MultiL:
-					case MultiR:
-						menuScreen = 1;
-						m.processInput(Up, menuScreen); // force the default menu 1 screen (on Seed)
+					// Singleplayer
+					case StartGame:
+						seedTextContents = clampSeedString(seedTextContents);
+						runGame(false, seedTextContents);
 						break;
+					// Multiplayer
 					case JoinGame:
-						setupMultiplayer();
+						seedTextContents = clampSeedString(seedTextContents);
+						setupMultiplayer(seedTextContents);
 						close(clientSocket);
 						break;
 					default:
 						break;
 				}
 			}
-			else if (keystate[SDL_SCANCODE_W] || keystate[SDL_SCANCODE_UP]) { buttonPress = Up; buttonPressed = true; }
-			else if (keystate[SDL_SCANCODE_A] || keystate[SDL_SCANCODE_LEFT]) { buttonPress = Left; buttonPressed = true; }
-			else if (keystate[SDL_SCANCODE_S] || keystate[SDL_SCANCODE_DOWN]) { buttonPress = Down; buttonPressed = true; }
-			else if (keystate[SDL_SCANCODE_D] || keystate[SDL_SCANCODE_RIGHT]) { buttonPress = Right; buttonPressed = true; }
-			// else if (keystate 1 or numpad 1) { append 1 to seed box }
-
-			// default init the variable to the current state in case a button wasn't pressed
-			MenuState currentState = m.getState();
-			if (buttonPressed) {
-				// update it in accordance with the pressed button
-				currentState = m.processInput(buttonPress, menuScreen);
-			}
-
+			
 			// switch out unselected for selected on the correct button
 			switch (currentState) {
+				// Main Menu
 				case Single:
-					menuState[0] = singleSel;
+					menuState[Single_INDEX] = singleSel;
 					break;
 				case Credits:
-					menuState[1] = creditsSel;
+					menuState[Credits_INDEX] = creditsSel;
 					break;
 				case MultiL:
 				case MultiR:
-					menuState[2] = multiSel;
+					menuState[Multi_INDEX] = multiSel;
 					break;
-				case Seed:
-					menuState[3] = seedSel;
+
+				// Singleplayer Menu
+				case SingleSeed:
+					menuState[SingleSeed_INDEX] = textFieldSel;
+					// add number to the seed string!
+					if (numPressDebounce <= 0 && numButtonPress != -1) {
+						if (numButtonPress == -2) {
+							// BACKSPACE!
+							if (seedTextContents != "") {
+								seedTextContents.pop_back();
+							}
+						} else if (numButtonPress >= 0) {
+							// NUMBER!
+							if (seedTextContents.length() != MAX_SEED_LENGTH) {
+								seedTextContents += std::to_string(numButtonPress);
+							}
+						}
+						numPressDebounce = NUM_PRESS_DEBOUNCE;
+					}
+					break;
+				case StartGame:
+					menuState[SingleJoin_INDEX] = joinSel;
+					break;
+
+				// Multiplayer Menu
+				case IP:
+					menuState[MultiIP_INDEX] = textFieldSel;
+					// add character to the IP string
+					if (numPressDebounce <= 0 && numButtonPress != -1) {
+						if (numButtonPress == -2) {
+							// BACKSPACE!
+							if (ipTextContents != "") {
+								ipTextContents.pop_back();
+							}
+						} else if (numButtonPress >= 0) {
+							// NUMBER!
+							if (ipTextContents.length() != MAX_IP_LENGTH) {
+								ipTextContents += std::to_string(numButtonPress);
+							}
+						} else if (numButtonPress == -3) {
+							// PERIOD!
+							if (ipTextContents.length() != MAX_IP_LENGTH) {
+								ipTextContents += ".";
+							}
+						}
+						numPressDebounce = NUM_PRESS_DEBOUNCE;
+					}
+					break;
+				case MultiSeed:
+					menuState[MultiSeed_INDEX] = textFieldSel;
+					// add number to the seed string!
+					if (numPressDebounce <= 0 && numButtonPress != -1) {
+						if (numButtonPress == -2) {
+							// BACKSPACE!
+							if (seedTextContents != "") {
+								seedTextContents.pop_back();
+							}
+						} else if (numButtonPress >= 0) {
+							// NUMBER!
+							if (seedTextContents.length() != MAX_SEED_LENGTH) {
+								seedTextContents += std::to_string(numButtonPress);
+							}
+						}
+						numPressDebounce = NUM_PRESS_DEBOUNCE;
+					}
+					if (numPressDebounce <= 0 && buttonPress != -1) {
+						// This button press caused us to arrive at this state, meaning we're going up or down the button ladder
+						numPressDebounce = NUM_PRESS_DEBOUNCE;
+					}
 					break;
 				case JoinGame:
-					menuState[4] = joinSel;
+					menuState[MultiJoin_INDEX] = joinSel;
 					break;
 			}
-
-			// x position, y position, width, height
-			SDL_Rect SpeedrunLogo = {319, 96, 642, 215};
-			SDL_Rect SingleButton = {180, 390, 450, 80};
-			SDL_Rect CreditsButton = {650, 390, 450, 80};
-			SDL_Rect MultiButton = {180, 485, 920, 80};
-
-			SDL_Rect SeedNotice = {363, 600, 554, 77};
-			SDL_Rect SeedLabel = {415, 390, 450, 80};
-			SDL_Rect JoinButton = {415, 485, 450, 80};
 
 			// Render the background first so it's in the back!
 			SDL_RenderCopy(screen->renderer, menuBG->texture, NULL, screen->bounds);
 			SDL_RenderCopy(screen->renderer, logo->texture, NULL, &SpeedrunLogo);
 
-			switch (menuScreen) {
-				case 0:
-					SDL_RenderCopy(screen->renderer, menuState[0]->texture, NULL, &SingleButton);
-					SDL_RenderCopy(screen->renderer, menuState[1]->texture, NULL, &CreditsButton);
-					SDL_RenderCopy(screen->renderer, menuState[2]->texture, NULL, &MultiButton);
+			// Added scope to each case because the compiler was err-ing for some reason
+			switch (currentState) {
+				case Single:
+				case Credits:
+				case MultiL:
+				case MultiR: {
+					SDL_RenderCopy(screen->renderer, menuState[Single_INDEX]->texture, NULL, &SingleButton);
+					SDL_RenderCopy(screen->renderer, menuState[Credits_INDEX]->texture, NULL, &CreditsButton);
+					SDL_RenderCopy(screen->renderer, menuState[Multi_INDEX]->texture, NULL, &MultiButton);
 					break;
-				case 1:
-					SDL_RenderCopy(screen->renderer, seedBG->texture, NULL, &SeedNotice);
-					SDL_RenderCopy(screen->renderer, menuState[3]->texture, NULL, &SeedLabel);
-					SDL_RenderCopy(screen->renderer, menuState[4]->texture, NULL, &JoinButton);
+				} 
+
+				case SingleSeed:
+				case StartGame: {
+					SDL_RenderCopy(screen->renderer, menuState[SingleSeed_INDEX]->texture, NULL, &SingleSeedLabel);
+					SDL_Texture* seedTextTexture = loadText(bungeeFont, black, seedTextContents);
+					SDL_RenderCopy(screen->renderer, seedTextTexture, NULL, &SingleSeedTextBox);
+					SDL_RenderCopy(screen->renderer, menuState[SingleJoin_INDEX]->texture, NULL, &SingleJoinButton);
 					break;
-				default:
-					std::cout << "Something went horribly wrong." << std::endl << menuScreen << " is not part of the domain of MenuStateMachine." << std::endl;
-					exit(1);
+				}
+
+				case IP:
+				case MultiSeed:
+				case JoinGame: {
+					SDL_RenderCopy(screen->renderer, menuState[MultiIP_INDEX]->texture, NULL, &IPLabel);
+					SDL_Texture* ipTextTexture = loadText(bungeeFont, black, ipTextContents);
+					SDL_RenderCopy(screen->renderer, ipTextTexture, NULL, &IPTextBox);
+
+					SDL_RenderCopy(screen->renderer, menuState[MultiSeed_INDEX]->texture, NULL, &MultiSeedLabel);
+					SDL_Texture* seedTextTexture = loadText(bungeeFont, black, seedTextContents);
+					SDL_RenderCopy(screen->renderer, seedTextTexture, NULL, &MultiSeedTextBox);
+
+					SDL_RenderCopy(screen->renderer, menuState[MultiJoin_INDEX]->texture, NULL, &MultiJoinButton);
 					break;
+				}
 			}
 
 			SDL_RenderPresent(screen->renderer);

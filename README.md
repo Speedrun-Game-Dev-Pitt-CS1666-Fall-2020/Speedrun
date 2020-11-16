@@ -16,6 +16,11 @@ and...
 1. `apt-cache search libsdl2-image`
 2. `sudo apt-get install libsdl2-image-dev`
 
+and...
+
+1. `apt-cache search libsdl2-ttf`
+2. `sudo apt-get install libsdl2-ttf-dev`
+
 # Building
 
 **Make sure you run the executable from inside the `bin` directory!** If you run it from somewhere else, your images may not load (the image paths will be wrong from that location)!
