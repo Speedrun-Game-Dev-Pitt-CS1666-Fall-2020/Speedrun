@@ -8,7 +8,7 @@
 #include <SDL.h>
 #include <SDL_image.h>
 
-Block::Block(SDL_Rect r, int b) : block_rect{r}, block_type{b}
+Block::Block(SDL_Rect r, int b, bool m, float s, float t) : block_rect{r}, block_type{b}, moving{m}, speed{s}, time_period{t}
 {
     //normal
     if(b==0){
@@ -28,5 +28,21 @@ Block::Block(SDL_Rect r, int b) : block_rect{r}, block_type{b}
         green = 255;
         blue = 130;
     }
+
+}
+
+void Block::updatePosition()
+{
+    
+    if(moving){
+        time+=1;
+        if(time >= time_period){
+            speed*=-1;
+            time = 0;
+        }
+
+        block_rect.x += speed;
+    }
+    
 
 }
