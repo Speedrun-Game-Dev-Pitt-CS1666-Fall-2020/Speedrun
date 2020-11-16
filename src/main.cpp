@@ -65,6 +65,11 @@ std::vector <BouncyBlock> bouncyblocks;
 std::vector <SDL_Rect> decorative_blocks;	//stores non-collidable blocks
 int clientSocket;	//Socket for connecting to the server
 TTF_Font* bungeeFont; // the game's font
+//SDL_Texture* rock = loadTexture("../res/rock.png");
+//SDL_Texture* wall = loadTexture("../res/wall.png");
+//SDL_Texture* background_wall = loadTexture("../res/background_wall.png");
+//SDL_Texture* ice = loadTexture("../res/ice.png");
+//SDL_Texture* bounce = loadTexture("../res/bounce.png");
 
 Image *loadImage(const char *src, int w, int h)
 {
@@ -240,20 +245,90 @@ Player* generateTerrain(int seed)
 	for(Block block : blocks){
 		//std::cout << block.block_rect.x << ", " <<  block.block_rect.y << ", " << block.block_rect.w << ", " << block.block_rect.h << "\n";
 	}
+	
+	SDL_Rect rect = {(int(mg->tubePoints[mg->tubeLength - 1].x))*BOX_SIZE, (int(mg->tubePoints[mg->tubeLength - 1].y)) * BOX_SIZE, 				BOX_SIZE, BOX_SIZE};
+	Block block = Block(rect, 3, false, 0, 0); //normal block
+	blocks.push_back(block);
 
+	//EXAMPLE moving block!!
+	//spawning near player
+	//Args for block are sdl rect, blocktype, ismoving, speed, timeperiodforchangedirection
+	//normal blocks will just be same thing but ismoving=false, speed=0, time=0
+	//push these onto blocks vector like they are any other block
+	SDL_Rect bee = {int(mg->tubePoints[0].x)*BOX_SIZE, int(mg->tubePoints[0].y)*BOX_SIZE, BOX_SIZE*5, BOX_SIZE};
+	Block* hellothere = new Block(bee, 0, true, 1, 80); //normal block
+	blocks.push_back(*hellothere);
+
+	//EXAMPLE bouncy balls!!!
+	//Args are spawnlocX, spawnlocY, width, height, initXVel, initYVel
+	//bouncyblocks vector is already created to be pushed onto
+	BouncyBlock* bouncy = new BouncyBlock(int(mg->tubePoints[0].x)*BOX_SIZE, int(mg->tubePoints[0].y)*BOX_SIZE, BOX_SIZE, BOX_SIZE, 2, 2);
+	BouncyBlock* bouncy2 = new BouncyBlock(int(mg->tubePoints[0].x)*BOX_SIZE, int(mg->tubePoints[0].y)*BOX_SIZE, BOX_SIZE, BOX_SIZE, 3, -1);
+
+	//bouncyblocks is vector that holds bouncy balls
+	//do this within terrain gen wherever u please
+	bouncyblocks.push_back(*bouncy);
+	bouncyblocks.push_back(*bouncy2);
 
 	//spawn player (we need to put this in its own function)
 	return new Player(mg->tubePoints[0].x*BOX_SIZE, mg->tubePoints[0].y*BOX_SIZE, 20, 20, loadTexture("../res/Guy.png"));
 }
 
 void renderTerrain(Player* p){
+	SDL_Texture* rock = loadTexture("../res/rock.png");
+	//SDL_Texture* wall = loadTexture("../res/wall.png");
+	//SDL_Texture* background_wall = loadTexture("../res/background_wall.png");
+	SDL_Texture* win = loadTexture("../res/win.png");
+	SDL_Texture* ice = loadTexture("../res/ice.png");
+	SDL_Texture* bounce = loadTexture("../res/bounce.png");
+	SDL_Rect rect2 = {0, 0, 0, 20};
 	int tx = p->x_pos-(1280/2);
 	int ty = p->y_pos-(720/2);
 	for(Block b : blocks){
 		SDL_Rect rect = {b.block_rect.x-tx,b.block_rect.y-ty,b.block_rect.w,b.block_rect.h};
-		SDL_SetRenderDrawColor(screen->renderer, b.red, b.green, b.blue, 0xFF);
-		SDL_RenderFillRect(screen->renderer, &rect);
+		//SDL_SetRenderDrawColor(screen->renderer, b.red, b.green, b.blue, 0xFF);
+		//SDL_Rect rect2 = {0, 0, b.block_rect.w, b.block_rect.h};
+		if (b.block_type == 0)
+		{
+			rect2.w = b.block_rect.w;
+			SDL_RenderCopy(screen->renderer, rock, &rect2, &rect);
+		}
+		else if (b.block_type == 1)
+		{
+			rect2.w = b.block_rect.w;
+			SDL_RenderCopy(screen->renderer, ice, &rect2, &rect);
+		}
+		else if (b.block_type == 2)
+		{
+			rect2.w = b.block_rect.w;
+			SDL_RenderCopy(screen->renderer, bounce, &rect2, &rect);
+		}
+		else if (b.block_type == 3)
+		{
+			rect2.w = b.block_rect.w;
+			SDL_RenderCopy(screen->renderer, win, &rect2, &rect);
+		}
+		/*else if (b.block_type == 6)
+		{
+			rect2.w = b.block_rect.w;
+			SDL_RenderCopy(screen->renderer, wall, &rect2, &rect);
+		}
+		else if (b.block_type == 7)
+		{
+			rect2.w = b.block_rect.w;
+			SDL_RenderCopy(screen->renderer, background_wall, &rect2, &rect);
+		}*/
+		else
+		{
+			SDL_SetRenderDrawColor(screen->renderer, b.red, b.green, b.blue, 0xFF);
+			SDL_RenderFillRect(screen->renderer, &rect);
+		}
+		
 	}
+	SDL_DestroyTexture(rock);
+	SDL_DestroyTexture(ice);
+	SDL_DestroyTexture(bounce);
+	SDL_DestroyTexture(win);
 }
 
 void renderBouncies(Player* p){
@@ -385,7 +460,7 @@ void runGame(bool multiplayer, std::string seed)
 	std::cout << "Seed being used for generation = " << seedAsInt << std::endl;
 	user = generateTerrain(seedAsInt);
 
-	//EXAMPLE moving block!!
+	/*//EXAMPLE moving block!!
 	//spawning near player
 	//Args for block are sdl rect, blocktype, ismoving, speed, timeperiodforchangedirection
 	//normal blocks will just be same thing but ismoving=false, speed=0, time=0
@@ -403,7 +478,7 @@ void runGame(bool multiplayer, std::string seed)
 	//bouncyblocks is vector that holds bouncy balls
 	//do this within terrain gen wherever u please
 	bouncyblocks.push_back(*bouncy);
-	bouncyblocks.push_back(*bouncy2);
+	bouncyblocks.push_back(*bouncy2);*/
 
 	//Define the blocks
 	/*SDL_Rect block = {SCREEN_WIDTH/2, SCREEN_HEIGHT-20, 200, 20};
