@@ -76,7 +76,7 @@ void MapGenerator::genBiomes(){
                     }
                 }else{
                     if(temp > 0.8){
-                        mat = 0;//add lava biome later
+                        mat = 1;//add lava biome later
                     }else{
                         mat = 0;
                     }
@@ -192,6 +192,30 @@ void MapGenerator::voxelize(){
             col[y] = (unsigned char)(min_density);
         }
     }
+    for (int i = 25; i <= 175; i= i + 50)
+    {
+	    for(int x = int(tubePoints[i].x - 5); x < (int(tubePoints[i].x) + 5); x++)
+	    {
+		for(int y = (int(tubePoints[i].y) - 5); y < (int(tubePoints[i].y) + 5); y++)
+		{
+		
+			if (!(x < 0 || x >= map->w || y < 0 || y >= map->h))
+			{
+				if ((x == int(tubePoints[i].x - 5) || (x == int(tubePoints[i].x) + 4) || (y == 	   				(int(tubePoints[i].y) - 5)) ||  
+					(y == (int(tubePoints[i].y) + 4))) && map->field[x][y] >= 100)
+					map->field[x][y] = 254;
+				else
+				{
+					map->field[x][y] = 255;
+					//map->field[x][y] = 0;
+				}
+			}
+			
+				
+		}
+	    }
+    }
+
 }
 
 //-1 to 1 lerp
@@ -237,6 +261,9 @@ void MapGenerator::genTube(){
     Vec2 min = Vec2(FLT_MAX,FLT_MAX);
     Vec2 max = Vec2(FLT_MIN,FLT_MIN);
     //float avg = 0;
+
+    Vec2 prev_v = Vec2(0,0);//new
+
     for(int i = 0; i < tubeLength; i++){
 
         min.x = min.x > pos.x ? pos.x : min.x;
@@ -270,8 +297,18 @@ void MapGenerator::genTube(){
         //Vec2 velFrame = Vec2(dx,dy).normal();
         //vel = (vel*ANTI_FLUENCE + velFrame*INFLUENCE).normal();
         //Vec2 v = vel*STRENGTH;
-        Vec2 v = Vec2(sinf(theta)*1.5f,cosf(theta))*STRENGTH;
+        Vec2 v;
+	/*if (i % 25 == 0 && i != 200)
+	{
+		if (prev_v.y > 0)
+			v = Vec2(16, 0);
+		else
+			v = Vec2(-16, 0);
+	}*/
+	//else
+		v = Vec2(sinf(theta)*1.5f,cosf(theta))*STRENGTH;
         pos += v;
+	prev_v = v;
         //pos.y += 0.5f;
         //std::cout << velRad << '\n'
         //    << std::cos(velRad) << '\n';

@@ -61,7 +61,7 @@ void BouncyBlock::detectCollisionsBlock(std::vector <Block> r)
 {
     for (auto block: r)
     {
-        if (isColliding(&(block.block_rect))){
+        if (isColliding(&(block.block_rect)) && block.block_type != 7){
             //for now also pass in a, later will get blocktype from struct
             handleCollision(block);
             //std::cout << a << std::endl;
