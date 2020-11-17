@@ -153,13 +153,19 @@ void close()
 
 void drawOtherPlayers(Player* thisPlayer, float otherPlayerOriginX, float otherPlayerOriginY, int playerNum)
 {
+	
+	float topLeftCornerX = thisPlayer->x_pos - SCREEN_WIDTH / 2;
+	float topLeftCornerY = thisPlayer->y_pos - SCREEN_WIDTH / 2;
+	
 	float otherPlayerScreenY = thisPlayer->y_screenPos - (thisPlayer->y_pos - otherPlayerOriginY);
+	float otherPlayerScreenX = thisPlayer->x_screenPos - (thisPlayer->x_pos - otherPlayerOriginx);
 
 	std::string spriteName = "../res/Guy" + std::to_string(playerNum) + std::string(".png");
-	SDL_Rect player = {(int)otherPlayerOriginX, (int)otherPlayerScreenY, thisPlayer->width, thisPlayer->height};
-	std::cout << "Placing player " << playerNum << " at " << otherPlayerOriginX << ", " << otherPlayerScreenY << std::endl;
+	SDL_Rect player = {(int)otherPlayerScreenX, (int)otherPlayerScreenY, thisPlayer->width, thisPlayer->height};
+	std::cout << "Placing player " << playerNum << " at " << otherPlayerScreenX << ", " << otherPlayerScreenY << std::endl;
 	SDL_RenderCopy(screen->renderer, loadTexture((spriteName)), NULL, &player);
 	SDL_RenderPresent(screen->renderer);
+	
 }
 
 #include "GameMap.h"
@@ -171,7 +177,6 @@ Player* generateTerrain(int seed)
 {
 	blocks.clear();
 	decorative_blocks.clear();
-
 	GameMap* map = new GameMap(seed);
 	MapGenerator* mg = new MapGenerator(map);
 
@@ -618,7 +623,7 @@ void runGame(bool multiplayer, std::string seed)
 					{
 						char playerCountTemp[2];
 						playerCountTemp[1] = buffer[index];
-						playerCount = atoi(playerCountTemp) + 1;
+						playerCount = atoi(playerCountTemp);
 					}
 
 					if(buffer[index] == '|')
@@ -644,24 +649,34 @@ void runGame(bool multiplayer, std::string seed)
 							incX = 0;
 							incY = 0;
 
-							mX = strtof(buffX, NULL);
-							mY = strtof(buffY, NULL);
-							drawOtherPlayers(user, mX, mY, currPlayer);
+							if(buffX[0] != 'n')
+							{
+								mX = strtof(buffX, NULL);
+								mY = strtof(buffY, NULL);
+							
+								drawOtherPlayers(user, mX, mY, currPlayer);
+							}
 
 							currPlayer++;
-
+							currentMark = -1;
 							/* Taking this out draws player 3 but keeps him attached to player 2's X and shifted below in Y
 							if(currPlayer > playerCount) // 3
 							{
 								break;
 							}
 							*/
+							
+							for(int i = 0; i < 16; i++)
+							{
+								
+								buffX[i] = 'n';
+								buffY[i] = 'n';
+								
+							}
+							
 						}
 					}
-					else if(buffer[index] == 'n')
-					{
-						std::cout << "player " << currPlayer << "is disconnected" << std::endl;
-					}
+					
 					else if(currentMark == -1)
 					{
 						buffX[incX] = buffer[index];
@@ -979,6 +994,7 @@ void runMenu()
 				case MultiL:
 				case MultiR:
 					menuState[Multi_INDEX] = multiSel;
+
 					break;
 
 				// Singleplayer Menu

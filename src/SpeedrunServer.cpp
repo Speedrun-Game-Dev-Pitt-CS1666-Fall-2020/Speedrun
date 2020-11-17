@@ -106,6 +106,12 @@ int main(int argc, char *argv[]) {
 	char player2[33];
 	char player3[33];
 	char player4[33];
+	char object1[19];
+	char object2[19];
+	char object3[19];
+	char object4[19];
+	char object5[19];
+	char object6[19];
 	bool toldPlayerSeed[max_players];
 	
 	for(int i = 0; i < 33; i++)
@@ -199,8 +205,14 @@ int main(int argc, char *argv[]) {
                     // The client disconnected
                     close(clientSocket);
 					toldPlayerSeed[findSocketIndex(clientSocket, clientSockets)] = false;
-					numberOfConnectedPlayers--;
+					numberOfConnectedPlayers--;					
                     clientSockets[i] = 0;
+					
+					//reset server seed
+					if(numberOfConnectedPlayers == 0)
+					{
+						seed = -1;
+					}
 					
 					if(i == 0)
 					{
