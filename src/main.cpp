@@ -158,7 +158,7 @@ void drawOtherPlayers(Player* thisPlayer, float otherPlayerOriginX, float otherP
 	float topLeftCornerY = thisPlayer->y_pos - SCREEN_WIDTH / 2;
 	
 	float otherPlayerScreenY = thisPlayer->y_screenPos - (thisPlayer->y_pos - otherPlayerOriginY);
-	float otherPlayerScreenX = thisPlayer->x_screenPos - (thisPlayer->x_pos - otherPlayerOriginx);
+	float otherPlayerScreenX = thisPlayer->x_screenPos - (thisPlayer->x_pos - otherPlayerOriginX);
 
 	std::string spriteName = "../res/Guy" + std::to_string(playerNum) + std::string(".png");
 	SDL_Rect player = {(int)otherPlayerScreenX, (int)otherPlayerScreenY, thisPlayer->width, thisPlayer->height};
