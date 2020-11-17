@@ -229,12 +229,17 @@ Player* generateTerrain(int seed)
 	for(Block block : blocks){
 		//std::cout << block.block_rect.x << ", " <<  block.block_rect.y << ", " << block.block_rect.w << ", " << block.block_rect.h << "\n";
 	}
+
+	SDL_Rect rect = {(int(mg->tubePoints[mg->tubeLength - 2].x))*BOX_SIZE, (int(mg->tubePoints[mg->tubeLength - 2].y)) * 		BOX_SIZE, BOX_SIZE, BOX_SIZE};
+	Block block = Block(rect, 3, false, 0, 0); //win block
+	blocks.push_back(block);
+
 	//spawn moving blocks
 	for(int i = 0; i < 6; i++)
 	{
 		int z = rand()%100 + 100;
 		SDL_Rect b = {mg->tubePoints[z].x*BOX_SIZE, mg->tubePoints[z].y*BOX_SIZE, BOX_SIZE*5, BOX_SIZE};
-		Block* moving = new Block(b, 1, true, 4, 40); //normal block
+		Block* moving = new Block(b, 1, true, -4, 40); //normal block
 		blocks.push_back(*moving);
 	}
 	//spawn bouncy blocks
