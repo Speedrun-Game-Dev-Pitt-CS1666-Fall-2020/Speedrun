@@ -211,22 +211,6 @@ Player* generateTerrain(int seed)
 			}
 
 			prevtype = currtype;
-			/*
-			if(type==currtype){//grow rect
-				w++;
-			}else if(currtype){//start rect
-				sx = x;
-				w = 0;
-			}else{//end rect
-				SDL_Rect rect = {sx*BOX_SIZE, y*BOX_SIZE, w*BOX_SIZE, BOX_SIZE};
-				Block block = Block(rect, 0); //normal block
-				blocks.push_back(block);
-				w = 0;
-				sx = x;
-
-			}
-			type = currtype;
-			*/
 		}
 
 		if(prevtype>-1){
@@ -240,9 +224,23 @@ Player* generateTerrain(int seed)
 	for(Block block : blocks){
 		//std::cout << block.block_rect.x << ", " <<  block.block_rect.y << ", " << block.block_rect.w << ", " << block.block_rect.h << "\n";
 	}
+	//spawn moving blocks
+	for(int i = 0; i < 6; i++)
+	{
+		int z = rand()%100 + 100;
+		SDL_Rect b = {mg->tubePoints[z].x*BOX_SIZE, mg->tubePoints[z].y*BOX_SIZE, BOX_SIZE*5, BOX_SIZE};
+		Block* moving = new Block(b, 1, true, 4, 40); //normal block
+		blocks.push_back(*moving);
+	}
+	//spawn bouncy blocks
+	for(int i = 0; i < 6; i++)
+	{
+		int z = rand()% 50;
+		BouncyBlock* bouncy = new BouncyBlock(mg->tubePoints[z].x*BOX_SIZE, mg->tubePoints[z].y*BOX_SIZE, BOX_SIZE*2, BOX_SIZE*2, 3, -1);
+		bouncyblocks.push_back(*bouncy);
+	}
+	//spawn player
 
-
-	//spawn player (we need to put this in its own function)
 	return new Player(mg->tubePoints[0].x*BOX_SIZE, mg->tubePoints[0].y*BOX_SIZE, 20, 20, loadTexture("../res/Guy.png"));
 }
 
@@ -385,32 +383,6 @@ void runGame(bool multiplayer, std::string seed)
 	std::cout << "Seed being used for generation = " << seedAsInt << std::endl;
 	user = generateTerrain(seedAsInt);
 
-	//EXAMPLE moving block!!
-	//spawning near player
-	//Args for block are sdl rect, blocktype, ismoving, speed, timeperiodforchangedirection
-	//normal blocks will just be same thing but ismoving=false, speed=0, time=0
-	//push these onto blocks vector like they are any other block
-	SDL_Rect bee = {(int)user->x_pos, (int)user->y_pos+20, BOX_SIZE*5, BOX_SIZE};
-	Block* hellothere = new Block(bee, 1, true, 1, 80); //normal block
-	blocks.push_back(*hellothere);
-
-	//EXAMPLE bouncy balls!!!
-	//Args are spawnlocX, spawnlocY, width, height, initXVel, initYVel
-	//bouncyblocks vector is already created to be pushed onto
-	BouncyBlock* bouncy = new BouncyBlock(user->x_pos, user->y_pos+20, BOX_SIZE, BOX_SIZE, 2, 2);
-	BouncyBlock* bouncy2 = new BouncyBlock(user->x_pos+20, user->y_pos+20, BOX_SIZE, BOX_SIZE, 3, -1);
-
-	//bouncyblocks is vector that holds bouncy balls
-	//do this within terrain gen wherever u please
-	bouncyblocks.push_back(*bouncy);
-	bouncyblocks.push_back(*bouncy2);
-
-	//Define the blocks
-	/*SDL_Rect block = {SCREEN_WIDTH/2, SCREEN_HEIGHT-20, 200, 20};
-	SDL_Rect anotherBlock = {SCREEN_WIDTH/2 - 190, SCREEN_HEIGHT-120, 120, 20};
-	SDL_Rect spring = {SCREEN_WIDTH/2 - 300, SCREEN_HEIGHT-180, 100, 20};
-	blocks = {block, anotherBlock, spring};*/
-
 	then = 0;
 	bzero(buffer, 256);
 	SDL_Event e;
@@ -486,14 +458,7 @@ void runGame(bool multiplayer, std::string seed)
 			temp.updatePosition();
 			bouncyblocks.at(i) = temp;
 		}
-		//if user position on screen < 720/3
-			//then change user position and user position on screen, not blocks.
-		//if user position on screen is > 1440/3
-			//then change user position and user position on screeen, not blocks.
-		//else
-			//change block locations
-		//X, always change X of player and player screen pos, never block
-
+		
 		//check constraints and resolve conflicts
 		//apply forces based off gravity and collisions
 
