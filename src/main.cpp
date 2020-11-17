@@ -65,6 +65,11 @@ std::vector <BouncyBlock> bouncyblocks;
 std::vector <SDL_Rect> decorative_blocks;	//stores non-collidable blocks
 int clientSocket;	//Socket for connecting to the server
 TTF_Font* bungeeFont; // the game's font
+//SDL_Texture* rock = loadTexture("../res/rock.png");
+//SDL_Texture* wall = loadTexture("../res/wall.png");
+//SDL_Texture* background_wall = loadTexture("../res/background_wall.png");
+//SDL_Texture* ice = loadTexture("../res/ice.png");
+//SDL_Texture* bounce = loadTexture("../res/bounce.png");
 
 Image *loadImage(const char *src, int w, int h)
 {
@@ -245,13 +250,60 @@ Player* generateTerrain(int seed)
 }
 
 void renderTerrain(Player* p){
+	SDL_Texture* rock = loadTexture("../res/rock.png");
+	//SDL_Texture* wall = loadTexture("../res/wall.png");
+	//SDL_Texture* background_wall = loadTexture("../res/background_wall.png");
+	SDL_Texture* win = loadTexture("../res/win.png");
+	SDL_Texture* ice = loadTexture("../res/ice.png");
+	SDL_Texture* bounce = loadTexture("../res/bounce.png");
+	SDL_Rect rect2 = {0, 0, 0, 20};
 	int tx = p->x_pos-(1280/2);
 	int ty = p->y_pos-(720/2);
 	for(Block b : blocks){
 		SDL_Rect rect = {b.block_rect.x-tx,b.block_rect.y-ty,b.block_rect.w,b.block_rect.h};
-		SDL_SetRenderDrawColor(screen->renderer, b.red, b.green, b.blue, 0xFF);
-		SDL_RenderFillRect(screen->renderer, &rect);
+		//SDL_SetRenderDrawColor(screen->renderer, b.red, b.green, b.blue, 0xFF);
+		//SDL_Rect rect2 = {0, 0, b.block_rect.w, b.block_rect.h};
+		if (b.block_type == 0)
+		{
+			rect2.w = b.block_rect.w;
+			SDL_RenderCopy(screen->renderer, rock, &rect2, &rect);
+		}
+		else if (b.block_type == 1)
+		{
+			rect2.w = b.block_rect.w;
+			SDL_RenderCopy(screen->renderer, ice, &rect2, &rect);
+		}
+		else if (b.block_type == 2)
+		{
+			rect2.w = b.block_rect.w;
+			SDL_RenderCopy(screen->renderer, bounce, &rect2, &rect);
+		}
+		else if (b.block_type == 3)
+		{
+			rect2.w = b.block_rect.w;
+			SDL_RenderCopy(screen->renderer, win, &rect2, &rect);
+		}
+		/*else if (b.block_type == 6)
+		{
+			rect2.w = b.block_rect.w;
+			SDL_RenderCopy(screen->renderer, wall, &rect2, &rect);
+		}
+		else if (b.block_type == 7)
+		{
+			rect2.w = b.block_rect.w;
+			SDL_RenderCopy(screen->renderer, background_wall, &rect2, &rect);
+		}*/
+		else
+		{
+			SDL_SetRenderDrawColor(screen->renderer, b.red, b.green, b.blue, 0xFF);
+			SDL_RenderFillRect(screen->renderer, &rect);
+		}
+		
 	}
+	SDL_DestroyTexture(rock);
+	SDL_DestroyTexture(ice);
+	SDL_DestroyTexture(bounce);
+	SDL_DestroyTexture(win);
 }
 
 void renderBouncies(Player* p){

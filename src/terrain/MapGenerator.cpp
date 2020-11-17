@@ -9,7 +9,7 @@
 
 #define TAU 6.283185307f
 #define PI 3.141592654f
-#define TUBE_LENGTH 300
+#define TUBE_LENGTH 200
 #define TUBE_LENGTH_VARY_AMOUNT 1
 #define INFLUENCE 1.f//scale of 1-2
 #define ANTI_FLUENCE 0.f
