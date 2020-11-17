@@ -106,6 +106,12 @@ int main(int argc, char *argv[]) {
 	char player2[33];
 	char player3[33];
 	char player4[33];
+	char object1[19];
+	char object2[19];
+	char object3[19];
+	char object4[19];
+	char object5[19];
+	char object6[19];
 	bool toldPlayerSeed[max_players];
 	
 	for(int i = 0; i < 33; i++)
@@ -133,6 +139,7 @@ int main(int argc, char *argv[]) {
 	}
 	
 	int seed = -1;
+	bool sendSeed = false;
 	
 	while (true) {
 		// start off each iteration with our read set = {Server}
@@ -192,27 +199,33 @@ int main(int argc, char *argv[]) {
                     // The client disconnected
                     close(clientSocket);
 					toldPlayerSeed[findSocketIndex(clientSocket, clientSockets)] = false;
-					numberOfConnectedPlayers--;
+					numberOfConnectedPlayers--;					
                     clientSockets[i] = 0;
+					
+					//reset server seed
+					if(numberOfConnectedPlayers == 0)
+					{
+						seed = -1;
+					}
 					
 					if(i == 0)
 					{
-						for(int k = 0; k < (unsigned)strlen(player1); k++){ player1[k] = 'n'; }
+						for(int k = 0; k < 33; k++){ player1[k] = 'n'; }
 						player1[16] = '|';
 					}
 					else if(i == 1)
 					{
-						for(int k = 0; k < (unsigned)strlen(player2); k++){ player2[k] = 'n'; }
+						for(int k = 0; k < 33; k++){ player2[k] = 'n'; }
 						player2[16] = '|';
 					}
 					else if(i == 2)
 					{
-						for(int k = 0; k < (unsigned)strlen(player3); k++){ player3[k] = 'n'; }
+						for(int k = 0; k < 33; k++){ player3[k] = 'n'; }
 						player3[16] = '|';
 					}
 					else
 					{
-						for(int k = 0; k < (unsigned)strlen(player4); k++){ player4[k] = 'n'; }
+						for(int k = 0; k < 33; k++){ player4[k] = 'n'; }
 						player4[16] = '|';
 					}
 					
@@ -226,15 +239,19 @@ int main(int argc, char *argv[]) {
 						if(seed == -1)
 						{
 							seed = atoi(buffer);
+							printf("Seed: %d\n", seed);
 							bzero(buffer, 256);
 							int lS = sprintf(buffer, "%i", seed);
-							send(clientSocket, buffer, strlen(buffer), 0);
+							//send(clientSocket, buffer, strlen(buffer), 0);
+							sendSeed = true;
 						}
 						else
 						{
+							printf("Antiseed: %d\n", seed);
 							bzero(buffer, 256);
 							int lS = sprintf(buffer, "%i", seed);
-							send(clientSocket, buffer, strlen(buffer), 0);
+							//send(clientSocket, buffer, strlen(buffer), 0);
+							sendSeed = true;
 						}
 					}
 					/*
@@ -494,7 +511,18 @@ int main(int argc, char *argv[]) {
 					}
 					
 					printf("%s\n",  buffer);
-					send(clientSocket, buffer, strlen(buffer), 0);
+					if(sendSeed == true)
+					{
+						bzero(buffer, 256);
+						int lS = sprintf(buffer, "%i", seed);
+						send(clientSocket, buffer, strlen(buffer), 0);
+						sendSeed = false;
+					}
+					else
+					{
+						send(clientSocket, buffer, strlen(buffer), 0);
+					}
+					
                 }
             }
         }
