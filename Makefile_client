@@ -1,0 +1,31 @@
+TARGET_EXEC ?= Speedrun
+
+BIN_DIR ?= ./bin
+BUILD_DIR ?= ./build
+SRC_DIRS ?= ./src
+MKDIR_P ?= mkdir -p
+
+ALL_SRCS := $(shell find $(SRC_DIRS) -name *.cpp)
+SRCS = $(filter-out $(SRC_DIRS)/SpeedrunServer.cpp, $(ALL_SRCS))
+
+OBJS := $(SRCS:%=$(BUILD_DIR)/%.o)
+DEPS := $(OBJS:.o=.d)
+
+INC_DIRS := $(shell find $(SRC_DIRS) -type d)
+INC_FLAGS := $(addprefix -I,$(INC_DIRS))
+EXTERNAL_INC_FLAGS = -I/usr/include/SDL2
+LIB_FLAGS = -lSDL2 -lSDL2_image -lSDL2_ttf
+
+CPPFLAGS ?= $(EXTERNAL_INC_FLAGS) $(INC_FLAGS) -MMD -MP
+
+# build object files into build folder
+$(BIN_DIR)/$(TARGET_EXEC): $(OBJS)
+	[ -d $(dir $@) ] || $(MKDIR_P) $(dir $@)
+	$(CXX) $(OBJS) -o $@ $(LIB_FLAGS) $(LDFLAGS) 
+
+# link
+$(BUILD_DIR)/%.cpp.o: %.cpp
+	[ -d $(dir $@) ] || $(MKDIR_P) $(dir $@)
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
+
+-include $(DEPS)

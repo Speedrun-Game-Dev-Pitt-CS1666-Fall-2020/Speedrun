@@ -1,4 +1,6 @@
 #include "Player.h"
+#include "Block.h"
+#include "BouncyBlock.h"
 #include <cmath>
 #include <iostream>
 #include <stdlib.h>
@@ -22,10 +24,8 @@ Player::Player(float x, float y, int w, int h, SDL_Texture *t) : x_pos{x}, y_pos
 
 void Player::updatePosition()
 {
-	//move horizontally, constrained by screen width
     x_pos += x_vel;
 
-	//move vertically, contrained by depth of world
     y_pos += y_vel;
 
 }
@@ -69,6 +69,14 @@ void Player::applyForces()
     if (x_vel < -4)
         x_vel = -4;
 
+    if (y_vel > 18)
+        y_vel = 18;
+
+    if (y_vel < -18)
+        y_vel = -18;
+
+    
+
 
     //if (cantJump)
     y_vel += y_accel;
@@ -76,7 +84,7 @@ void Player::applyForces()
 
 }
 
-void Player::detectCollisions(std::vector <SDL_Rect> r)
+void Player::detectCollisions(std::vector <Block> r)
 {
 
     //cant jump unless detech collision with some floor
@@ -84,32 +92,96 @@ void Player::detectCollisions(std::vector <SDL_Rect> r)
 
     //go thru all possible collision things and checkCollision/apply force
     //for colliding with bottom of screen
-    if (y_pos >= 3000 - height)
-    {
-        y_pos = 3000 - height;
-        //y_vel = 0;
-        //y_accel = 0;
-        if (y_vel > 0)
-        {
-            y_vel = 0;
-        }
-        cantJump = false;
-    }
+    // if (y_pos >= 3000 - height)
+    // {
+    //     y_pos = 3000 - height;
+    //     //y_vel = 0;
+    //     //y_accel = 0;
+    //     if (y_vel > 0)
+    //     {
+    //         y_vel = 0;
+    //     }
+    //     cantJump = false;
+    // }
 
     //make friction .3 which gets updated if hit frictionless block to less
     friction = 0.3;
 
 
-    int a = 0;
     for (auto block: r)
     {
-        if (isColliding(&block)){
+        if (isColliding(&(block.block_rect))){
             //for now also pass in a, later will get blocktype from struct
-            handleCollision(&block, a);
+            handleCollision(block);
             //std::cout << a << std::endl;
         }
-        a++;
     }
+}
+
+void Player::detectBouncyBlockCollisions(std::vector <BouncyBlock> r)
+{
+
+    for (auto block: r)
+    {
+        
+        if (isBouncyBlockColliding(block)){
+            //for now also pass in a, later will get blocktype from struct
+            handleBouncyBlockCollision(block);
+            //std::cout << a << std::endl;
+        }
+        
+    }
+}
+
+bool Player::isBouncyBlockColliding(BouncyBlock b)
+{
+    // Check vertical overlap
+    if (y_pos + height <= b.y_pos)
+        return false;
+    if (y_pos >= b.y_pos + b.height)
+        return false;
+
+    // Check horizontal overlap
+    if (x_pos >= b.x_pos + b.width)
+        return false;
+    if (x_pos + width <= b.x_pos)
+        return false;
+
+    // Must overlap in both
+    return true;
+}
+
+void Player::handleBouncyBlockCollision(BouncyBlock r)
+{
+
+    if(r.x_vel < 0){
+        x_vel += -8;
+        if(x_vel < -4){
+            x_vel = -4;
+        }
+        //std::cout<<"left"<<std::endl;
+    }else if(r.x_vel > 0){
+        x_vel += 8;
+        if(x_vel > 4){
+            x_vel = 4;
+        }
+        //std::cout<<"right"<<std::endl;
+    }
+
+    if(r.y_vel < 0){
+        y_vel += -8;
+        if(y_vel < -18){
+            y_vel = -18;
+        }
+        //std::cout<<"up"<<std::endl;
+    }else if(r.y_vel > 0){
+        y_vel += 8;
+        if(y_vel > 18){
+            y_vel = 18;
+        }
+        //std::cout<<"down"<<std::endl;
+    }
+
 }
 
 bool Player::isColliding(SDL_Rect *r)
@@ -134,18 +206,16 @@ bool Player::isColliding(SDL_Rect *r)
 //spring traps + friction and stuff change accel variables
 
 //FOR NOW, int a gets block height for block type. will get block type from struct
-void Player::handleCollision(SDL_Rect *r, int a)
+void Player::handleCollision(Block r)
 {
     float bounce = 15;
-    std::cout << a << std::endl;
 
-    if(a < 60){
-        std::cout << " normal" << std::endl;
-    }else if (a < 120){
-        std::cout << " frictionless" << std::endl;
+    if(r.block_type == 3){
+        std::cout << "You win!" << std::endl;
+    }
+
+    if(r.block_type == 1){
         friction = 0.1;
-    }else if (a >= 120){
-        std::cout << " bouncy" << std::endl;
     }
 
     //Check player velocity direction for
@@ -161,13 +231,13 @@ void Player::handleCollision(SDL_Rect *r, int a)
     {
         //hitting collision object from right
         //need x pos of player to be box + boxwidth
-        requiredX = r->x + r->w;
+        requiredX = r.block_rect.x + r.block_rect.w;
     }
     else if(x_vel > 0)
     {
         //hitting collision object from left
         //need x pos of player to be box - playerwidth
-        requiredX = r->x - width;
+        requiredX = r.block_rect.x - width;
     }else{
         requiredX = 0;
     }
@@ -176,13 +246,13 @@ void Player::handleCollision(SDL_Rect *r, int a)
     {
         //hitting collision object from bot
         //need y pos of player to be box+boxheight
-        requiredY = r->y + r->h;
+        requiredY = r.block_rect.y + r.block_rect.h;
     }
     else if(y_vel > 0)
     {
         //hitting collision object from top
         //need y pos of player to be box - playerheight
-        requiredY = r->y - height;
+        requiredY = r.block_rect.y - height;
     }else{
         requiredY = 0;
     }
@@ -200,8 +270,7 @@ void Player::handleCollision(SDL_Rect *r, int a)
         }
 
         //not bouncy
-        //not bouncy
-        if(a < 120){
+        if(r.block_type != 2){
             y_vel = 0;
         }else{  //bouncy
             if(y_vel > 0){
@@ -219,9 +288,9 @@ void Player::handleCollision(SDL_Rect *r, int a)
         y_pos = complementaryY;
         x_pos = requiredX;
 
-                //not bouncy
+
         //not bouncy
-        if(a < 120){
+        if(r.block_type != 2){
             x_vel = 0;
         }else{  //bouncy
             if(x_vel > 0){
@@ -243,7 +312,7 @@ void Player::handleCollision(SDL_Rect *r, int a)
             x_pos = requiredX;
 
             //not bouncy
-            if(a < 120){
+            if(r.block_type != 2){
                 x_vel = 0;
             }else{  //bouncy
                 if(x_vel > 0){
@@ -264,7 +333,7 @@ void Player::handleCollision(SDL_Rect *r, int a)
                 cantJump = false;
             
             //not bouncy
-            if(a < 120){
+            if(r.block_type != 2){
                 y_vel = 0;
             }else{  //bouncy
                 if(y_vel > 0){

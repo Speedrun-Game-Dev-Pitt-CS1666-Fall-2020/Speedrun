@@ -177,7 +177,6 @@ Player* generateTerrain(int seed)
 {
 	blocks.clear();
 	decorative_blocks.clear();
-
 	GameMap* map = new GameMap(seed);
 	MapGenerator* mg = new MapGenerator(map);
 
@@ -995,6 +994,7 @@ void runMenu()
 				case MultiL:
 				case MultiR:
 					menuState[Multi_INDEX] = multiSel;
+
 					break;
 
 				// Singleplayer Menu

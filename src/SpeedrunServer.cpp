@@ -185,6 +185,12 @@ int main(int argc, char *argv[]) {
                 }
             }
         }
+
+		//reset server seed
+		if(numberOfConnectedPlayers == 0)
+		{
+			seed = -1;
+		}
         
         // Find the socket there was activity on
         for (int i = 0; i < max_players; i++) {
