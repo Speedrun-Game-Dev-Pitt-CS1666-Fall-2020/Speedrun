@@ -179,13 +179,9 @@ int main(int argc, char *argv[]) {
                 }
             }
         }
-
-		//reset server seed
-		if(numberOfConnectedPlayers == 0)
-		{
-			seed = -1;
-		}
         
+		//printf("%d\n", numberOfConnectedPlayers);
+		
         // Find the socket there was activity on
         for (int i = 0; i < max_players; i++) {
             clientSocket = clientSockets[i];
@@ -201,6 +197,12 @@ int main(int argc, char *argv[]) {
 					toldPlayerSeed[findSocketIndex(clientSocket, clientSockets)] = false;
 					numberOfConnectedPlayers--;
                     clientSockets[i] = 0;
+					
+					//reset server seed
+					if(numberOfConnectedPlayers == 0)
+					{
+						seed = -1;
+					}
 					
 					if(i == 0)
 					{
@@ -377,6 +379,11 @@ int main(int argc, char *argv[]) {
 							incTemp++;
 							
 						}
+						
+						firstTerminator = firstTerminator + (unsigned)strlen(player4);
+						incTemp = 0;
+						buffer[firstTerminator] = '|';
+						firstTerminator++;
 												
 					}
 					else if(index == 1) //we are player2
@@ -417,6 +424,11 @@ int main(int argc, char *argv[]) {
 							incTemp++;
 							
 						}
+						
+						firstTerminator = firstTerminator + (unsigned)strlen(player4);
+						incTemp = 0;
+						buffer[firstTerminator] = '|';
+						firstTerminator++;
 												
 					}
 					else if(index == 2) //we are player3
@@ -457,6 +469,11 @@ int main(int argc, char *argv[]) {
 							incTemp++;
 							
 						}
+						
+						firstTerminator = firstTerminator + (unsigned)strlen(player4);
+						incTemp = 0;
+						buffer[firstTerminator] = '|';
+						firstTerminator++;
 												
 					}
 					else if(index == 3) //we are player4
@@ -497,6 +514,11 @@ int main(int argc, char *argv[]) {
 							incTemp++;
 							
 						}
+						
+						firstTerminator = firstTerminator + (unsigned)strlen(player1);
+						incTemp = 0;
+						buffer[firstTerminator] = '|';
+						firstTerminator++;
 												
 					}
 					else //ran out of players to be, something went wrong
