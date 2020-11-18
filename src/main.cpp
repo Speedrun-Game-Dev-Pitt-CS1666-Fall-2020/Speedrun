@@ -17,6 +17,7 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include <time.h>
+#include <arpa/inet.h>
 
 // Our headers
 #include "XorShifter.h"
@@ -26,13 +27,24 @@
 #include "Player.h"
 #include "Block.h"
 #include "BouncyBlock.h"
-
 #include "MenuStateMachine.hpp"
-
 #include "Block.h"
 
+#define MENU_SIZE 8
 #define CREDIT_SIZE 10
-#define MENU_SIZE 5
+
+#define Single_INDEX 0
+#define Credits_INDEX 1
+#define Multi_INDEX 2
+#define SingleSeed_INDEX 3
+#define SingleJoin_INDEX 4
+#define MultiIP_INDEX 5
+#define MultiSeed_INDEX 6
+#define MultiJoin_INDEX 7
+
+#define MAX_IP_LENGTH 15
+#define MAX_SEED_LENGTH 10
+#define NUM_PRESS_DEBOUNCE 15
 
 constexpr int SCREEN_WIDTH = 1280;
 constexpr int SCREEN_HEIGHT = 720;
@@ -54,6 +66,11 @@ std::vector <BouncyBlock> bouncyblocks;
 std::vector <SDL_Rect> decorative_blocks;	//stores non-collidable blocks
 int clientSocket;	//Socket for connecting to the server
 TTF_Font* bungeeFont; // the game's font
+//SDL_Texture* rock = loadTexture("../res/rock.png");
+//SDL_Texture* wall = loadTexture("../res/wall.png");
+//SDL_Texture* background_wall = loadTexture("../res/background_wall.png");
+//SDL_Texture* ice = loadTexture("../res/ice.png");
+//SDL_Texture* bounce = loadTexture("../res/bounce.png");
 
 Image *loadImage(const char *src, int w, int h)
 {
@@ -137,11 +154,15 @@ void close()
 
 void drawOtherPlayers(Player* thisPlayer, float otherPlayerOriginX, float otherPlayerOriginY, int playerNum)
 {
-	float otherPlayerScreenY = thisPlayer->y_screenPos - (thisPlayer->y_pos - otherPlayerOriginY);
+	float topLeftCornerX = thisPlayer->x_pos - SCREEN_WIDTH / 2;
+	float topLeftCornerY = thisPlayer->y_pos - SCREEN_HEIGHT / 2;
+	
+	float otherPlayerScreenX = otherPlayerOriginX - topLeftCornerX;
+	float otherPlayerScreenY = otherPlayerOriginY - topLeftCornerY;
 
 	std::string spriteName = "../res/Guy" + std::to_string(playerNum) + std::string(".png");
-	SDL_Rect player = {(int)otherPlayerOriginX, (int)otherPlayerScreenY, thisPlayer->width, thisPlayer->height};
-	std::cout << "Placing player " << playerNum << " at " << otherPlayerOriginX << ", " << otherPlayerScreenY << std::endl;
+	SDL_Rect player = {(int)otherPlayerScreenX, (int)otherPlayerScreenY, thisPlayer->width, thisPlayer->height};
+	//std::cout << "Placing player " << playerNum << " at " << otherPlayerScreenX << ", " << otherPlayerScreenY << std::endl;
 	SDL_RenderCopy(screen->renderer, loadTexture((spriteName)), NULL, &player);
 	SDL_RenderPresent(screen->renderer);
 }
@@ -155,6 +176,8 @@ Player* generateTerrain(int seed)
 {
 	blocks.clear();
 	decorative_blocks.clear();
+
+	srand(seed);
 
 	GameMap* map = new GameMap(seed);
 	MapGenerator* mg = new MapGenerator(map);
@@ -200,22 +223,6 @@ Player* generateTerrain(int seed)
 			}
 
 			prevtype = currtype;
-			/*
-			if(type==currtype){//grow rect
-				w++;
-			}else if(currtype){//start rect
-				sx = x;
-				w = 0;
-			}else{//end rect
-				SDL_Rect rect = {sx*BOX_SIZE, y*BOX_SIZE, w*BOX_SIZE, BOX_SIZE};
-				Block block = Block(rect, 0); //normal block
-				blocks.push_back(block);
-				w = 0;
-				sx = x;
-
-			}
-			type = currtype;
-			*/
 		}
 
 		if(prevtype>-1){
@@ -230,19 +237,85 @@ Player* generateTerrain(int seed)
 		//std::cout << block.block_rect.x << ", " <<  block.block_rect.y << ", " << block.block_rect.w << ", " << block.block_rect.h << "\n";
 	}
 
+	SDL_Rect rect = {(int(mg->tubePoints[mg->tubeLength - 2].x))*BOX_SIZE, (int(mg->tubePoints[mg->tubeLength - 2].y)) * 		BOX_SIZE, BOX_SIZE, BOX_SIZE};
+	Block block = Block(rect, 3, false, 0, 0); //win block
+	blocks.push_back(block);
 
-	//spawn player (we need to put this in its own function)
+	//spawn moving blocks
+	for(int i = 0; i < 6; i++)
+	{
+		int z = rand()%100 + 100;
+		SDL_Rect b = {mg->tubePoints[z].x*BOX_SIZE, mg->tubePoints[z].y*BOX_SIZE, BOX_SIZE*5, BOX_SIZE};
+		Block* moving = new Block(b, 1, true, -4, 40); //normal block
+		blocks.push_back(*moving);
+	}
+	//spawn bouncy blocks
+	for(int i = 0; i < 6; i++)
+	{
+		int z = rand()% 50;
+		BouncyBlock* bouncy = new BouncyBlock(mg->tubePoints[z].x*BOX_SIZE, mg->tubePoints[z].y*BOX_SIZE, BOX_SIZE*2, BOX_SIZE*2, 3, -1);
+		bouncyblocks.push_back(*bouncy);
+	}
+	//spawn player
+
 	return new Player(mg->tubePoints[0].x*BOX_SIZE, mg->tubePoints[0].y*BOX_SIZE, 20, 20, loadTexture("../res/Guy.png"));
 }
 
 void renderTerrain(Player* p){
+	SDL_Texture* rock = loadTexture("../res/rock.png");
+	//SDL_Texture* wall = loadTexture("../res/wall.png");
+	//SDL_Texture* background_wall = loadTexture("../res/background_wall.png");
+	SDL_Texture* win = loadTexture("../res/win.png");
+	SDL_Texture* ice = loadTexture("../res/ice.png");
+	SDL_Texture* bounce = loadTexture("../res/bounce.png");
+	SDL_Rect rect2 = {0, 0, 0, 20};
 	int tx = p->x_pos-(1280/2);
 	int ty = p->y_pos-(720/2);
 	for(Block b : blocks){
 		SDL_Rect rect = {b.block_rect.x-tx,b.block_rect.y-ty,b.block_rect.w,b.block_rect.h};
-		SDL_SetRenderDrawColor(screen->renderer, b.red, b.green, b.blue, 0xFF);
-		SDL_RenderFillRect(screen->renderer, &rect);
+		//SDL_SetRenderDrawColor(screen->renderer, b.red, b.green, b.blue, 0xFF);
+		//SDL_Rect rect2 = {0, 0, b.block_rect.w, b.block_rect.h};
+		if (b.block_type == 0)
+		{
+			rect2.w = b.block_rect.w;
+			SDL_RenderCopy(screen->renderer, rock, &rect2, &rect);
+		}
+		else if (b.block_type == 1)
+		{
+			rect2.w = b.block_rect.w;
+			SDL_RenderCopy(screen->renderer, ice, &rect2, &rect);
+		}
+		else if (b.block_type == 2)
+		{
+			rect2.w = b.block_rect.w;
+			SDL_RenderCopy(screen->renderer, bounce, &rect2, &rect);
+		}
+		else if (b.block_type == 3)
+		{
+			rect2.w = b.block_rect.w;
+			SDL_RenderCopy(screen->renderer, win, &rect2, &rect);
+		}
+		/*else if (b.block_type == 6)
+		{
+			rect2.w = b.block_rect.w;
+			SDL_RenderCopy(screen->renderer, wall, &rect2, &rect);
+		}
+		else if (b.block_type == 7)
+		{
+			rect2.w = b.block_rect.w;
+			SDL_RenderCopy(screen->renderer, background_wall, &rect2, &rect);
+		}*/
+		else
+		{
+			SDL_SetRenderDrawColor(screen->renderer, b.red, b.green, b.blue, 0xFF);
+			SDL_RenderFillRect(screen->renderer, &rect);
+		}
+		
 	}
+	SDL_DestroyTexture(rock);
+	SDL_DestroyTexture(ice);
+	SDL_DestroyTexture(bounce);
+	SDL_DestroyTexture(win);
 }
 
 void renderBouncies(Player* p){
@@ -265,7 +338,6 @@ void runCredits()
 	simp->updateFractalBounds();
 
 	Image *credits[CREDIT_SIZE] = {
-
 		loadImage("../res/rjd68.png", 800, 600),
 		loadImage("../res/alex.png", 1280, 720),
 		loadImage("../res/andrew.png", 1280, 720),
@@ -275,7 +347,8 @@ void runCredits()
 		loadImage("../res/lucas.png", 1280, 720),
 		loadImage("../res/robert.png", 1280, 720),
 		loadImage("../res/spencer.png", 1280, 720),
-		loadImage("../res/ryanyang.png", 1280, 720)};
+		loadImage("../res/ryanyang.png", 1280, 720)
+	};
 
 	float dt;
 
@@ -374,32 +447,6 @@ void runGame(bool multiplayer, std::string seed)
 	std::cout << "Seed being used for generation = " << seedAsInt << std::endl;
 	user = generateTerrain(seedAsInt);
 
-	//EXAMPLE moving block!!
-	//spawning near player
-	//Args for block are sdl rect, blocktype, ismoving, speed, timeperiodforchangedirection
-	//normal blocks will just be same thing but ismoving=false, speed=0, time=0
-	//push these onto blocks vector like they are any other block
-	SDL_Rect bee = {(int)user->x_pos, (int)user->y_pos+20, BOX_SIZE*5, BOX_SIZE};
-	Block* hellothere = new Block(bee, 1, true, 1, 80); //normal block
-	blocks.push_back(*hellothere);
-
-	//EXAMPLE bouncy balls!!!
-	//Args are spawnlocX, spawnlocY, width, height, initXVel, initYVel
-	//bouncyblocks vector is already created to be pushed onto
-	BouncyBlock* bouncy = new BouncyBlock(user->x_pos, user->y_pos+20, BOX_SIZE, BOX_SIZE, 2, 2);
-	BouncyBlock* bouncy2 = new BouncyBlock(user->x_pos+20, user->y_pos+20, BOX_SIZE, BOX_SIZE, 3, -1);
-
-	//bouncyblocks is vector that holds bouncy balls
-	//do this within terrain gen wherever u please
-	bouncyblocks.push_back(*bouncy);
-	bouncyblocks.push_back(*bouncy2);
-
-	//Define the blocks
-	/*SDL_Rect block = {SCREEN_WIDTH/2, SCREEN_HEIGHT-20, 200, 20};
-	SDL_Rect anotherBlock = {SCREEN_WIDTH/2 - 190, SCREEN_HEIGHT-120, 120, 20};
-	SDL_Rect spring = {SCREEN_WIDTH/2 - 300, SCREEN_HEIGHT-180, 100, 20};
-	blocks = {block, anotherBlock, spring};*/
-
 	then = 0;
 	bzero(buffer, 256);
 	SDL_Event e;
@@ -475,14 +522,7 @@ void runGame(bool multiplayer, std::string seed)
 			temp.updatePosition();
 			bouncyblocks.at(i) = temp;
 		}
-		//if user position on screen < 720/3
-			//then change user position and user position on screen, not blocks.
-		//if user position on screen is > 1440/3
-			//then change user position and user position on screeen, not blocks.
-		//else
-			//change block locations
-		//X, always change X of player and player screen pos, never block
-
+		
 		//check constraints and resolve conflicts
 		//apply forces based off gravity and collisions
 
@@ -585,7 +625,7 @@ void runGame(bool multiplayer, std::string seed)
 					{
 						char playerCountTemp[2];
 						playerCountTemp[1] = buffer[index];
-						playerCount = atoi(playerCountTemp) + 1;
+						playerCount = atoi(playerCountTemp);
 					}
 
 					if(buffer[index] == '|')
@@ -597,7 +637,9 @@ void runGame(bool multiplayer, std::string seed)
 				}
 
 				hitMarks = 0;
-
+				
+				printf("%s\n", buffer);
+				
 				for(index; index < (unsigned)strlen(buffer); index++)
 				{
 
@@ -605,17 +647,21 @@ void runGame(bool multiplayer, std::string seed)
 					{
 						currentMark = index;
 						hitMarks++;
-
+						
 						if(hitMarks % 2 == 0)
 						{
 							incX = 0;
 							incY = 0;
 
-							mX = strtof(buffX, NULL);
-							mY = strtof(buffY, NULL);
-							drawOtherPlayers(user, mX, mY, currPlayer);
+							if(buffX[0] != 'n')
+							{
+								mX = strtof(buffX, NULL);
+								mY = strtof(buffY, NULL);
+								drawOtherPlayers(user, mX, mY, currPlayer);
+							}
 
 							currPlayer++;
+							currentMark = -1;
 
 							/* Taking this out draws player 3 but keeps him attached to player 2's X and shifted below in Y
 							if(currPlayer > playerCount) // 3
@@ -623,12 +669,18 @@ void runGame(bool multiplayer, std::string seed)
 								break;
 							}
 							*/
+							
+							for(int i = 0; i < 16; i++)
+							{
+								
+								buffX[i] = 'n';
+								buffY[i] = 'n';
+								
+							}
+							
 						}
 					}
-					else if(buffer[index] == 'n')
-					{
-						std::cout << "player " << currPlayer << "is disconnected" << std::endl;
-					}
+					
 					else if(currentMark == -1)
 					{
 						buffX[incX] = buffer[index];
@@ -673,12 +725,14 @@ void error(const char *msg)
     exit(1);
 }
 
-void setupMultiplayer(std::string seed)
+void setupMultiplayer(std::string seed, std::string ip)
 {
 
 	const char* hostName = "localhost";
 	const uint16_t portNum = 3060;
 	char buffer[256];
+	char* ipStr = new char[ip.length() + 1];
+	strcpy(ipStr, ip.c_str());
 
 	//Create socket
 	clientSocket = socket(AF_INET, SOCK_STREAM, 0);
@@ -691,14 +745,15 @@ void setupMultiplayer(std::string seed)
 	bzero((char*) &serverAddress, sizeof(serverAddress));
 
 	//Get server info
-	struct hostent* server = gethostbyname(hostName);
+	/*struct hostent* server = gethostbyname(hostName);
 	if(server == NULL) {
 		error("Unable to find server.");
-	}
+	}*/
 
 	//Populate server object
 	serverAddress.sin_family = AF_INET;
-	bcopy((char*)server->h_addr, (char*)&serverAddress.sin_addr.s_addr, server->h_length);
+	//bcopy((char*)server->h_addr, (char*)&serverAddress.sin_addr.s_addr, server->h_length);
+	serverAddress.sin_addr.s_addr = inet_addr(ipStr);
 
 	//Connect to server
 	serverAddress.sin_port = htons(portNum);
@@ -785,6 +840,19 @@ void runMultiTestClient()
 	*/
 }
 
+std::string clampSeedString(std::string seedTextContents) {
+	std::string ret = seedTextContents;
+	int seed = atoi(seedTextContents.c_str());
+
+	if (seed < 0) {
+		// there was underflow
+		ret = "2147483647";
+		// set seed to MAX_INT
+	}
+
+	return ret;
+}
+
 void runMenu()
 {
 	SDL_Event e;
@@ -798,28 +866,46 @@ void runMenu()
 	// Load in our menu images
 	Image* logo = loadImage("../res/SpeedrunLogo.png", 642, 215);
 	Image* menuBG = loadImage("../res/FadedBackground.png", 1280, 720);
-	Image* seedBG = loadImage("../res/SeedNotice.png", 1280, 720); 
 
 	Image* single = loadImage("../res/MenuSingle.png", 450, 80);
 	Image* credits = loadImage("../res/MenuCredits.png", 450, 80);
 	Image* multi = loadImage("../res/MenuMulti.png", 920, 80);
-
-	Image* seed = loadImage("../res/EnterSeed.png", 450, 80);
+	Image* textField = loadImage("../res/TextField.png", 450, 80);
 	Image* join = loadImage("../res/JoinGame.png", 450, 80);
 
 	Image* singleSel = loadImage("../res/MenuSingleSelect.png", 450, 80);
 	Image* creditsSel = loadImage("../res/MenuCreditsSelect.png", 450, 80);
 	Image* multiSel = loadImage("../res/MenuMultiSelect.png", 920, 80);
-
-	Image* seedSel = loadImage("../res/EnterSeedSelect.png", 450, 80);
+	Image* textFieldSel = loadImage("../res/TextFieldSelect.png", 450, 80);
 	Image* joinSel = loadImage("../res/JoinGameSelect.png", 450, 80);
 
-	// A variable representing which menu screen we're on (changes when you hit enter)
-	int menuScreen = 0;
+	// Create our image/button positions
+	// x position, y position, width, height
+	SDL_Rect SpeedrunLogo = {319, 96, 642, 215};
+	int labelTextAdjust = 30;
+	int buttonSpaceY = 95; // this has 80px button height baked into it
+
+	// Main Menu
+	SDL_Rect SingleButton = {180, 390, 450, 80};
+	SDL_Rect CreditsButton = {650, 390, 450, 80};
+	SDL_Rect MultiButton = {180, 485, 920, 80};
+
+	// Singleplayer Menu
+	SDL_Rect SingleSeedLabel = {415, 390, 450, 80};
+	SDL_Rect SingleSeedTextBox = {SingleSeedLabel.x + labelTextAdjust/2, SingleSeedLabel.y + labelTextAdjust/2, SingleSeedLabel.w - labelTextAdjust, SingleSeedLabel.h - labelTextAdjust};
+	SDL_Rect SingleJoinButton = {415, SingleSeedLabel.y + buttonSpaceY, 450, 80};
+
+	// Multiplayer Menu
+	SDL_Rect IPLabel = {415, 390, 450, 80};
+	SDL_Rect IPTextBox = {IPLabel.x + labelTextAdjust/2, IPLabel.y + labelTextAdjust/2, IPLabel.w - labelTextAdjust, IPLabel.h - labelTextAdjust};
+	SDL_Rect MultiSeedLabel = {415, IPLabel.y + buttonSpaceY, 450, 80};
+	SDL_Rect MultiSeedTextBox = {MultiSeedLabel.x + labelTextAdjust/2, MultiSeedLabel.y + labelTextAdjust/2, MultiSeedLabel.w - labelTextAdjust, MultiSeedLabel.h - labelTextAdjust};
+	SDL_Rect MultiJoinButton = {415, MultiSeedLabel.y + buttonSpaceY, 450, 80};
 
 	// prepare our seed entering variables
 	SDL_Color black = {0, 0, 0};
 	std::string seedTextContents = "";
+	std::string ipTextContents = "";	
 	int numPressDebounce = 0;
 
 	while (gameon)
@@ -838,38 +924,28 @@ void runMenu()
 			MenuInput buttonPress = (MenuInput)-1;
 			int numButtonPress = -1;
 
+			// This slows down the menu operations
+			if (numPressDebounce > 0) {
+				// We're waiting...
+				numPressDebounce--;
+			}
+
 			// initialize all buttons to unselected
 			Image* menuState[MENU_SIZE] = {
-				single, credits, multi, seed, join
+				single, credits, multi, 
+				textField, join, 
+				textField, textField, join
 			};
-
-			if (keystate[SDL_SCANCODE_RETURN]) {
-				switch (m.getState()) {
-					case Single:
-						runGame(false, "");
-						break;
-					case Credits:
-						before = SDL_GetTicks();
-						runCredits();
-						break;
-					case MultiL:
-					case MultiR:
-						menuScreen = 1;
-						m.processInput(Up, menuScreen); // force the default menu 1 screen (on Seed)
-						break;
-					case JoinGame:
-						setupMultiplayer(seedTextContents);
-						close(clientSocket);
-						break;
-					default:
-						break;
-				}
-			}
-			else if (keystate[SDL_SCANCODE_W] || keystate[SDL_SCANCODE_UP]) { buttonPress = Up; }
+			
+			// Check for menu operations
+			if (keystate[SDL_SCANCODE_W] || keystate[SDL_SCANCODE_UP]) { buttonPress = Up; }
 			else if (keystate[SDL_SCANCODE_A] || keystate[SDL_SCANCODE_LEFT]) { buttonPress = Left; }
 			else if (keystate[SDL_SCANCODE_S] || keystate[SDL_SCANCODE_DOWN]) { buttonPress = Down; }
 			else if (keystate[SDL_SCANCODE_D] || keystate[SDL_SCANCODE_RIGHT]) { buttonPress = Right; }
+			else if (keystate[SDL_SCANCODE_RETURN] || keystate[SDL_SCANCODE_KP_ENTER]) { buttonPress = Enter; }
+			else if (keystate[SDL_SCANCODE_ESCAPE]) { buttonPress = Esc; }
 
+			// Check for text operations
 			else if (keystate[SDL_SCANCODE_0] || keystate[SDL_SCANCODE_KP_0]) { numButtonPress = 0; }
 			else if (keystate[SDL_SCANCODE_1] || keystate[SDL_SCANCODE_KP_1]) { numButtonPress = 1; }
 			else if (keystate[SDL_SCANCODE_2] || keystate[SDL_SCANCODE_KP_2]) { numButtonPress = 2; }
@@ -881,29 +957,55 @@ void runMenu()
 			else if (keystate[SDL_SCANCODE_8] || keystate[SDL_SCANCODE_KP_8]) { numButtonPress = 8; }
 			else if (keystate[SDL_SCANCODE_9] || keystate[SDL_SCANCODE_KP_9]) { numButtonPress = 9; }
 			else if (keystate[SDL_SCANCODE_BACKSPACE] || keystate[SDL_SCANCODE_KP_BACKSPACE]) { numButtonPress = -2; }
+			else if (keystate[SDL_SCANCODE_PERIOD] || keystate[SDL_SCANCODE_KP_PERIOD]) { numButtonPress = -3; }
 
-			// default init the variable to the current state in case a button wasn't pressed
+			// initialize the variable to the current state in case a button wasn't pressed
 			MenuState currentState = m.getState();
 			if (buttonPress != -1) {
 				// update it in accordance with the pressed button
-				currentState = m.processInput(buttonPress, menuScreen);
+				if (numPressDebounce <= 0) {
+					currentState = m.processInput(buttonPress);
+				}
 			}
-			numPressDebounce--;
+			if (buttonPress == Enter) {
+				switch (m.getState()) {
+					case Credits:
+						before = SDL_GetTicks();
+						runCredits();
+						break;
+					// Singleplayer
+					case StartGame:
+						seedTextContents = clampSeedString(seedTextContents);
+						runGame(false, seedTextContents);
+						break;
+					// Multiplayer
+					case JoinGame:
+						seedTextContents = clampSeedString(seedTextContents);
+						setupMultiplayer(seedTextContents, ipTextContents);
+						close(clientSocket);
+						break;
+					default:
+						break;
+				}
+			}
 			
 			// switch out unselected for selected on the correct button
 			switch (currentState) {
+				// Main Menu
 				case Single:
-					menuState[0] = singleSel;
+					menuState[Single_INDEX] = singleSel;
 					break;
 				case Credits:
-					menuState[1] = creditsSel;
+					menuState[Credits_INDEX] = creditsSel;
 					break;
 				case MultiL:
 				case MultiR:
-					menuState[2] = multiSel;
+					menuState[Multi_INDEX] = multiSel;
 					break;
-				case Seed:
-					menuState[3] = seedSel;
+
+				// Singleplayer Menu
+				case SingleSeed:
+					menuState[SingleSeed_INDEX] = textFieldSel;
 					// add number to the seed string!
 					if (numPressDebounce <= 0 && numButtonPress != -1) {
 						if (numButtonPress == -2) {
@@ -911,53 +1013,109 @@ void runMenu()
 							if (seedTextContents != "") {
 								seedTextContents.pop_back();
 							}
-						} else {
+						} else if (numButtonPress >= 0) {
 							// NUMBER!
-							if (seedTextContents.length() != 5) {
+							if (seedTextContents.length() != MAX_SEED_LENGTH) {
 								seedTextContents += std::to_string(numButtonPress);
 							}
 						}
-						numPressDebounce = 15;
+						numPressDebounce = NUM_PRESS_DEBOUNCE;
+					}
+					break;
+				case StartGame:
+					menuState[SingleJoin_INDEX] = joinSel;
+					break;
+
+				// Multiplayer Menu
+				case IP:
+					menuState[MultiIP_INDEX] = textFieldSel;
+					// add character to the IP string
+					if (numPressDebounce <= 0 && numButtonPress != -1) {
+						if (numButtonPress == -2) {
+							// BACKSPACE!
+							if (ipTextContents != "") {
+								ipTextContents.pop_back();
+							}
+						} else if (numButtonPress >= 0) {
+							// NUMBER!
+							if (ipTextContents.length() != MAX_IP_LENGTH) {
+								ipTextContents += std::to_string(numButtonPress);
+							}
+						} else if (numButtonPress == -3) {
+							// PERIOD!
+							if (ipTextContents.length() != MAX_IP_LENGTH) {
+								ipTextContents += ".";
+							}
+						}
+						numPressDebounce = NUM_PRESS_DEBOUNCE;
+					}
+					break;
+				case MultiSeed:
+					menuState[MultiSeed_INDEX] = textFieldSel;
+					// add number to the seed string!
+					if (numPressDebounce <= 0 && numButtonPress != -1) {
+						if (numButtonPress == -2) {
+							// BACKSPACE!
+							if (seedTextContents != "") {
+								seedTextContents.pop_back();
+							}
+						} else if (numButtonPress >= 0) {
+							// NUMBER!
+							if (seedTextContents.length() != MAX_SEED_LENGTH) {
+								seedTextContents += std::to_string(numButtonPress);
+							}
+						}
+						numPressDebounce = NUM_PRESS_DEBOUNCE;
+					}
+					if (numPressDebounce <= 0 && buttonPress != -1) {
+						// This button press caused us to arrive at this state, meaning we're going up or down the button ladder
+						numPressDebounce = NUM_PRESS_DEBOUNCE;
 					}
 					break;
 				case JoinGame:
-					menuState[4] = joinSel;
+					menuState[MultiJoin_INDEX] = joinSel;
 					break;
 			}
-
-			// x position, y position, width, height
-			SDL_Rect SpeedrunLogo = {319, 96, 642, 215};
-			SDL_Rect SingleButton = {180, 390, 450, 80};
-			SDL_Rect CreditsButton = {650, 390, 450, 80};
-			SDL_Rect MultiButton = {180, 485, 920, 80};
-
-			SDL_Rect SeedNotice = {363, 600, 554, 77};
-			SDL_Rect SeedLabel = {415, 390, 450, 80};
-			int seedTextAdjust = 30;
-			SDL_Rect textBox = {SeedLabel.x + seedTextAdjust/2, SeedLabel.y + seedTextAdjust/2, SeedLabel.w - seedTextAdjust, SeedLabel.h - seedTextAdjust};
-			SDL_Rect JoinButton = {415, 485, 450, 80};
 
 			// Render the background first so it's in the back!
 			SDL_RenderCopy(screen->renderer, menuBG->texture, NULL, screen->bounds);
 			SDL_RenderCopy(screen->renderer, logo->texture, NULL, &SpeedrunLogo);
 
-			switch (menuScreen) {
-				case 0: {
-					SDL_RenderCopy(screen->renderer, menuState[0]->texture, NULL, &SingleButton);
-					SDL_RenderCopy(screen->renderer, menuState[1]->texture, NULL, &CreditsButton);
-					SDL_RenderCopy(screen->renderer, menuState[2]->texture, NULL, &MultiButton);
-					break; }
-				case 1: {
-					SDL_RenderCopy(screen->renderer, seedBG->texture, NULL, &SeedNotice);
-					SDL_RenderCopy(screen->renderer, menuState[3]->texture, NULL, &SeedLabel);
-					SDL_RenderCopy(screen->renderer, menuState[4]->texture, NULL, &JoinButton);
-					SDL_Texture* textTex = loadText(bungeeFont, black, seedTextContents);
-					SDL_RenderCopy(screen->renderer, textTex, NULL, &textBox);
-					break; }
-				default: {
-					std::cout << "Something went horribly wrong." << std::endl << menuScreen << " is not part of the domain of MenuStateMachine." << std::endl;
-					exit(1);
-					break; }
+			// Added scope to each case because the compiler was err-ing for some reason
+			switch (currentState) {
+				case Single:
+				case Credits:
+				case MultiL:
+				case MultiR: {
+					SDL_RenderCopy(screen->renderer, menuState[Single_INDEX]->texture, NULL, &SingleButton);
+					SDL_RenderCopy(screen->renderer, menuState[Credits_INDEX]->texture, NULL, &CreditsButton);
+					SDL_RenderCopy(screen->renderer, menuState[Multi_INDEX]->texture, NULL, &MultiButton);
+					break;
+				} 
+
+				case SingleSeed:
+				case StartGame: {
+					SDL_RenderCopy(screen->renderer, menuState[SingleSeed_INDEX]->texture, NULL, &SingleSeedLabel);
+					SDL_Texture* seedTextTexture = loadText(bungeeFont, black, seedTextContents);
+					SDL_RenderCopy(screen->renderer, seedTextTexture, NULL, &SingleSeedTextBox);
+					SDL_RenderCopy(screen->renderer, menuState[SingleJoin_INDEX]->texture, NULL, &SingleJoinButton);
+					break;
+				}
+
+				case IP:
+				case MultiSeed:
+				case JoinGame: {
+					SDL_RenderCopy(screen->renderer, menuState[MultiIP_INDEX]->texture, NULL, &IPLabel);
+					SDL_Texture* ipTextTexture = loadText(bungeeFont, black, ipTextContents);
+					SDL_RenderCopy(screen->renderer, ipTextTexture, NULL, &IPTextBox);
+
+					SDL_RenderCopy(screen->renderer, menuState[MultiSeed_INDEX]->texture, NULL, &MultiSeedLabel);
+					SDL_Texture* seedTextTexture = loadText(bungeeFont, black, seedTextContents);
+					SDL_RenderCopy(screen->renderer, seedTextTexture, NULL, &MultiSeedTextBox);
+
+					SDL_RenderCopy(screen->renderer, menuState[MultiJoin_INDEX]->texture, NULL, &MultiJoinButton);
+					break;
+				}
 			}
 
 			SDL_RenderPresent(screen->renderer);
