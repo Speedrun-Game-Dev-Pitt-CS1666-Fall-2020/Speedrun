@@ -446,7 +446,7 @@ void runGame(bool multiplayer, std::string seed)
 		std::cout << "Seed provided and atoi'd = " << seedAsInt << std::endl;
 	} else {
 		// create our own seed
-		seedAsInt = (rand() + 2);
+		seedAsInt = (rand());
 		std::cout << "Seed generated on its own = " << seedAsInt << std::endl;
 	}
 	std::cout << "Initial seed assignment = " << seedAsInt << std::endl;
