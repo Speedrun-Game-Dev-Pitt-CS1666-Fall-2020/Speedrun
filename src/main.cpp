@@ -198,13 +198,23 @@ Player* generateTerrain(int seed)
 		for(; x < map->w; x++){
 			int currtype = map->field[x][y] >= 100 ? map->mat_field[x][y] : -1;
 			
+			if (map->field[x][y] == 254)
+				currtype = 6;
+			else if (map->field[x][y] == 255)
+				currtype = 7;
+
 			if(currtype > -1){
 				if(prevtype==currtype){
 					w++;
 				}else{
-					if(prevtype > -1){
+					if(prevtype == 7){
 						SDL_Rect rect = {sx*BOX_SIZE, y*BOX_SIZE, w*BOX_SIZE, BOX_SIZE};
-						Block block = Block(rect, prevtype, false, 0, 0); //normal block
+						Block block = Block(rect, prevtype, false, 0, 0);//, false);
+						blocks.push_back(block);
+					}
+					else if(prevtype > -1 && prevtype < 7){
+						SDL_Rect rect = {sx*BOX_SIZE, y*BOX_SIZE, w*BOX_SIZE, BOX_SIZE};
+						Block block = Block(rect, prevtype, false, 0, 0);//, true); //normal block
 						blocks.push_back(block);
 					}
 					sx = x;
@@ -239,17 +249,34 @@ Player* generateTerrain(int seed)
 	blocks.push_back(block);
 
 	//spawn moving blocks
-	for(int i = 0; i < 6; i++)
+	/*for(int i = 0; i < 10; i++)
 	{
-		int z = rand()%100 + 100;
+		int z = rand()%150 + 50;
 		SDL_Rect b = {mg->tubePoints[z].x*BOX_SIZE, mg->tubePoints[z].y*BOX_SIZE, BOX_SIZE*5, BOX_SIZE};
 		Block* moving = new Block(b, 1, true, -4, 40); //normal block
 		blocks.push_back(*moving);
+	}*/
+	for(int i = 25; i <= 175; i= i + 25)
+	{
+		if (i % 2 == 1)
+		{
+			//int z = rand()%150 + 50;
+			SDL_Rect b = {(mg->tubePoints[i].x - 5)*BOX_SIZE, mg->tubePoints[i].y*BOX_SIZE, BOX_SIZE*5, BOX_SIZE};
+			Block* moving = new Block(b, 2, true, 4, 30); //normal block
+			blocks.push_back(*moving);
+		}
+		else
+		{
+			//int z = rand()%150 + 50;
+			SDL_Rect b = {(mg->tubePoints[i].x - 5)*BOX_SIZE, mg->tubePoints[i].y*BOX_SIZE, BOX_SIZE*5, BOX_SIZE};
+			Block* moving = new Block(b, 1, true, 4, 40); //normal block
+			blocks.push_back(*moving);
+		}
 	}
 	//spawn bouncy blocks
-	for(int i = 0; i < 6; i++)
+	for(int i = 0; i < 2; i++)
 	{
-		int z = rand()% 50;
+		int z = rand()% 30;
 		BouncyBlock* bouncy = new BouncyBlock(mg->tubePoints[z].x*BOX_SIZE, mg->tubePoints[z].y*BOX_SIZE, BOX_SIZE*2, BOX_SIZE*2, 3, -1);
 		bouncyblocks.push_back(*bouncy);
 	}
@@ -260,8 +287,8 @@ Player* generateTerrain(int seed)
 
 void renderTerrain(Player* p){
 	SDL_Texture* rock = loadTexture("../res/rock.png");
-	//SDL_Texture* wall = loadTexture("../res/wall.png");
-	//SDL_Texture* background_wall = loadTexture("../res/background_wall.png");
+	SDL_Texture* wall = loadTexture("../res/wall.png");
+	SDL_Texture* background_wall = loadTexture("../res/background_wall.png");
 	SDL_Texture* win = loadTexture("../res/win.png");
 	SDL_Texture* ice = loadTexture("../res/ice.png");
 	SDL_Texture* bounce = loadTexture("../res/bounce.png");
@@ -292,7 +319,7 @@ void renderTerrain(Player* p){
 			rect2.w = b.block_rect.w;
 			SDL_RenderCopy(screen->renderer, win, &rect2, &rect);
 		}
-		/*else if (b.block_type == 6)
+		else if (b.block_type == 6)
 		{
 			rect2.w = b.block_rect.w;
 			SDL_RenderCopy(screen->renderer, wall, &rect2, &rect);
@@ -301,7 +328,7 @@ void renderTerrain(Player* p){
 		{
 			rect2.w = b.block_rect.w;
 			SDL_RenderCopy(screen->renderer, background_wall, &rect2, &rect);
-		}*/
+		}
 		else
 		{
 			SDL_SetRenderDrawColor(screen->renderer, b.red, b.green, b.blue, 0xFF);
@@ -313,6 +340,8 @@ void renderTerrain(Player* p){
 	SDL_DestroyTexture(ice);
 	SDL_DestroyTexture(bounce);
 	SDL_DestroyTexture(win);
+	SDL_DestroyTexture(wall);
+	SDL_DestroyTexture(background_wall);
 }
 
 void renderBouncies(Player* p){
